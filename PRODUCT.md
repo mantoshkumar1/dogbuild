@@ -61,3 +61,40 @@ not built now, and not evidence of demand.
 
 If the commercial test (step 4) is weak, Pro is not built and the tool is parked
 as a personal utility.
+
+## Validated problems & product principles (added 2026-07-25)
+
+The Day 3 acceptance run validated two more founder problems.
+
+### 1. Routine transport must not interrupt the user
+```yaml
+problem: manual-cross-agent-transport
+founder_problem_status: validated
+commercial_status: unvalidated
+```
+The manual run required the user to locate a file, upload it to ChatGPT, copy the
+decision, and return it. That **proves the protocol but fails the intended product
+experience.**
+
+**Principle:** *The user must not act as a routine courier between ChatGPT, Claude,
+and Codex.* Interrupt the user only for: `VETO`; `NEEDS_HUMAN`; an unresolved agent
+disagreement; insufficient evidence; stale/mismatched context that cannot be
+refreshed automatically; or irreversible/externally-consequential actions. Routine
+request/decision transport, import, verification, and continuation should
+eventually be automatic. **This automation does not exist yet** — the manual file
+bridge is a **temporary proof mechanism, not the target product experience.**
+
+### 2. Founder orientation loss
+```yaml
+problem: founder-orientation-loss
+frequency: recurring
+founder_problem_status: validated
+personal_validation_ability: strong
+commercial_status: unvalidated
+```
+The user can lose track *inside their own work* — what is being built, which phase
+is active, why the current task exists, and how the latest Claude reply / latest
+ChatGPT decision / repository state relate — even when machine state exists.
+
+**Principle:** *Project state must be understandable to the human owner in seconds,
+not only machine-readable by agents.* See [`docs/orientation-brief.md`](docs/orientation-brief.md).
