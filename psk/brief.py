@@ -1,15 +1,14 @@
-"""Orientation Brief — answers, for the human owner in <20s:
-"Where am I, what am I building, what just happened, and what happens next?"
+"""Orientation Brief — one-screen answer to "where am I / what's next" for the
+human owner, driven by the active Goal Contract.
 
-Combines live git evidence, canonical state, the latest agent declaration, the
-latest valid reviewer decision, and the original objective — using this truth
-order (highest first) and SHOWING conflicts rather than silently merging them:
+Truth order (highest first), conflicts SHOWN not merged:
+    live repository evidence > current valid reviewer decision > canonical state
+    > latest execution-agent declaration > older summaries
 
-    live repository evidence
-    > current valid reviewer decision
-    > canonical Project State Keeper state
-    > latest execution-agent declaration
-    > older summaries
+Human-decision rule (fixed): a stale historical artifact produces a WARNING, never
+a `Human decision needed: yes`. Human decision is `yes` only when a *current*
+unresolved choice blocks the exact next action (a current agent declaration marked
+`NEEDS_HUMAN_SCOPE_CHANGE` against the current goal revision).
 """
 
 from __future__ import annotations
@@ -26,76 +25,82 @@ def build(path: str) -> Tuple[dict, List[str]]:
     live = gitutil.capture_git_state(root)
     mode = agentmode.load(root)
     decl = declaration.load_latest(root)
+    gc = state.goal_contract
 
     last_cp = state.checkpoints.get(state.last_checkpoint_id) if state.last_checkpoint_id else None
     imported = [r for r in state.reviews.values() if r.get("status") == "imported"]
     latest_review = sorted(imported, key=lambda r: r.get("imported_at", ""))[-1] if imported else None
-    pending_reviews = [r for r in state.reviews.values() if r.get("status") == "pending"]
-    outstanding_handoff = handoff_mod.latest_outstanding(state)
 
-    # Conflict detection across truth sources (never silently merged).
-    conflicts: List[str] = []
+    decl_current = bool(decl) and decl.get("claimed_head") == live["head_commit"]
+
+    # Warnings — informational only; they NEVER set human_decision_needed.
+    warnings: List[str] = []
     if latest_review and latest_review.get("head_commit") != live["head_commit"]:
-        conflicts.append("Latest reviewer decision was made for an older commit "
-                         "(no longer current) — re-request before relying on it.")
-    if decl and decl.get("claimed_head") != live["head_commit"]:
-        conflicts.append("Latest agent declaration references a different HEAD than "
-                         "the live repository — trust git, not the declaration.")
+        warnings.append("A past reviewer decision is for an older commit "
+                        "(historical, not currently relied upon).")
+    if decl and not decl_current:
+        warnings.append("The latest agent declaration references an older HEAD; "
+                        "ignoring it in favour of live git evidence.")
 
-    human_needed = bool(pending_reviews) or bool(conflicts)
+    # Human decision is required only for a CURRENT, blocking, unresolved choice.
+    human_needed = False
+    reason = ""
+    if decl_current:
+        ga = decl.get("goal_alignment") or {}
+        cur_rev = gc["revision"] if gc else None
+        if (ga.get("status") == "NEEDS_HUMAN_SCOPE_CHANGE"
+                and ga.get("goal_contract_revision") == cur_rev):
+            human_needed = True
+            reason = ga.get("explanation") or "an agent flagged a scope change"
 
-    if outstanding_handoff:
-        waiting = (f"outstanding handoff to {outstanding_handoff['target_agent']}: "
-                   f"{outstanding_handoff['task'][:80]}")
-    elif pending_reviews:
-        waiting = f"{len(pending_reviews)} review(s) awaiting a ChatGPT decision"
-    elif last_cp:
-        waiting = last_cp.next_safe_action
-    else:
-        waiting = "(nothing recorded)"
+    exact_next = (last_cp.next_safe_action if last_cp
+                  else (gc.get("exact_next_action") if gc else "(none recorded)"))
+    tested = "; ".join(last_cp.tested) if last_cp and last_cp.tested else "unknown"
 
     fields = {
-        "project": ident.display_name,
-        "original_objective": state.objective.text if state.objective else "(not set)",
-        "current_phase": state.scope.description if state.scope else "(not set)",
+        "product": gc["product_name"] if gc else ident.display_name,
+        "core_repository": ident.display_name,
+        "problem": gc["problem"] if gc else "(no goal contract imported)",
+        "current_milestone": gc["current_milestone"] if gc else (
+            state.scope.description if state.scope else "(not set)"),
         "what_just_completed": last_cp.summary if last_cp else "(no checkpoint yet)",
         "current_verified_state": (
             f"{live['branch']} @ {(live['head_commit'] or 'unborn')[:12]}, "
-            f"worktree {'clean' if not live['dirty'] else 'dirty'} (ignoring .ai)"
-        ),
-        "what_is_waiting": waiting,
-        "exact_next_action": last_cp.next_safe_action if last_cp else "(none recorded)",
+            f"worktree {'clean' if not live['dirty'] else 'dirty'} (ignoring .ai); "
+            f"tests: {tested}"),
+        "exact_next_action": exact_next,
         "why_next": ("Recorded as the next safe action in the latest verified "
-                     "checkpoint." if last_cp else "No checkpoint yet."),
+                     "checkpoint." if last_cp else
+                     "First action from the approved goal contract." if gc else "n/a"),
+        "parked_ideas": len(state.parked_ideas),
         "human_decision_needed": "yes" if human_needed else "no",
+        "human_decision_reason": reason,
+        "goal_revision": gc["revision"] if gc else None,
         "active_agent": mode.get("active_execution_agent"),
-        "codex_status": mode.get("codex_status"),
         "reviewer": mode.get("review_authority"),
-        "last_reviewer_decision": (f"{latest_review['verdict']} on "
-                                   f"{(latest_review['head_commit'] or '')[:12]}"
-                                   if latest_review else "none"),
     }
-    return fields, conflicts
+    return fields, warnings
 
 
-def render_text(fields: dict, conflicts: List[str]) -> str:
+def render_text(fields: dict, warnings: List[str]) -> str:
     out = (
-        f"Project:              {fields['project']}\n"
-        f"Original objective:   {fields['original_objective']}\n"
-        f"Current phase:        {fields['current_phase']}\n"
+        f"Product:              {fields['product']}\n"
+        f"Core repository:      {fields['core_repository']}\n"
+        f"Problem:              {fields['problem']}\n"
+        f"Current milestone:    {fields['current_milestone']}\n"
         f"What just completed:  {fields['what_just_completed']}\n"
         f"Current verified state: {fields['current_verified_state']}\n"
-        f"What is waiting:      {fields['what_is_waiting']}\n"
         f"Exact next action:    {fields['exact_next_action']}\n"
-        f"Why that action is next: {fields['why_next']}\n"
-        f"Human decision needed: {fields['human_decision_needed']}\n"
-        f"---\n"
-        f"Active agent: {fields['active_agent']} "
-        f"(codex: {fields['codex_status']}) | reviewer: {fields['reviewer']} | "
-        f"last reviewer decision: {fields['last_reviewer_decision']}\n"
+        f"Why it is next:       {fields['why_next']}\n"
+        f"Parked ideas:         {fields['parked_ideas']}\n"
+        f"Warnings:             {len(warnings)}"
+        + (" (see below)" if warnings else " (none)") + "\n"
+        f"Human decision needed: {fields['human_decision_needed']}"
+        + (f" — {fields['human_decision_reason']}" if fields['human_decision_reason'] else "")
+        + "\n"
     )
-    if conflicts:
-        out += "\n⚠ Source conflicts (shown, not merged):\n"
-        for c in conflicts:
-            out += f"  - {c}\n"
+    if warnings:
+        out += "---\n"
+        for w in warnings:
+            out += f"  · {w}\n"
     return out

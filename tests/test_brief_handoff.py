@@ -37,22 +37,22 @@ class Base(unittest.TestCase):
 
 class TestBrief(Base):
     def test_human_brief(self):
-        fields, conflicts = brief.build(self.root)
-        text = brief.render_text(fields, conflicts)
-        self.assertIn("Project:", text)
+        fields, warnings = brief.build(self.root)
+        text = brief.render_text(fields, warnings)
+        self.assertIn("Product:", text)
         self.assertIn("Exact next action:", text)
         self.assertIn("Human decision needed:", text)
         self.assertEqual(fields["human_decision_needed"], "no")
-        self.assertEqual(conflicts, [])
+        self.assertEqual(warnings, [])
 
     def test_json_brief_and_where_am_i_alias(self):
         c1, o1 = run(["brief", self.root, "--json"])
         c2, o2 = run(["where-am-i", self.root, "--json"])
         self.assertEqual((c1, c2), (0, 0))
         j1, j2 = json.loads(o1), json.loads(o2)
-        self.assertIn("project", j1)
-        self.assertEqual(j1["project"], j2["project"])          # alias -> same source
-        self.assertEqual(j1["current_phase"], j2["current_phase"])
+        self.assertIn("product", j1)
+        self.assertEqual(j1["product"], j2["product"])          # alias -> same source
+        self.assertEqual(j1["current_milestone"], j2["current_milestone"])
 
     def test_where_am_i_human_alias(self):
         # Delegated dogfood task: confirm the alias for HUMAN-READABLE output too
@@ -61,20 +61,20 @@ class TestBrief(Base):
         c2, o2 = run(["where-am-i", self.root])
         self.assertEqual((c1, c2), (0, 0))
         self.assertEqual(o1, o2)  # identical output => true alias
-        self.assertIn("Project:", o1)
+        self.assertIn("Product:", o1)
 
     def test_missing_declaration_is_fine(self):
         self.assertIsNone(declaration.load_latest(self.root))
         fields, conflicts = brief.build(self.root)  # must not crash
         self.assertEqual(conflicts, [])
 
-    def test_declaration_conflicting_with_git(self):
+    def test_declaration_conflicting_with_git_warns_not_blocks(self):
         declaration.record(self.root, building="x", changed="y", verified="z",
                            failed="None", incomplete="None", next_action="next")
         self._commit_code()  # HEAD moves -> declaration.claimed_head is now stale
-        fields, conflicts = brief.build(self.root)
-        self.assertTrue(any("declaration" in c.lower() for c in conflicts))
-        self.assertEqual(fields["human_decision_needed"], "yes")
+        fields, warnings = brief.build(self.root)
+        self.assertTrue(any("declaration" in w.lower() for w in warnings))  # warned
+        self.assertEqual(fields["human_decision_needed"], "no")             # NOT blocked
 
 
 class TestHandoff(Base):

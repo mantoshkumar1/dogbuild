@@ -43,6 +43,7 @@ def create(path: str, *, to_agent: str, task: str, from_agent: str = "claude",
     git = gitutil.capture_git_state(root)
     prohibited = prohibited or RESERVED_HUMAN_ACTIONS
 
+    gc = state.goal_contract
     pid = new_uuid()
     ts = now_iso()
     rec = {
@@ -50,6 +51,9 @@ def create(path: str, *, to_agent: str, task: str, from_agent: str = "claude",
         "packet_type": "agent_handoff",
         "project_id": ident.project_id,
         "repository_id": ident.repository_id,
+        "goal_contract_id": gc["goal_id"] if gc else None,
+        "goal_revision": gc["revision"] if gc else None,
+        "goal_fingerprint": gc["fingerprint"] if gc else None,
         "branch": git["branch"],
         "head_commit": git["head_commit"],
         "diff_fingerprint": git["dirty_fingerprint"],
@@ -94,6 +98,9 @@ head: {git['head_commit']}
 diff_fingerprint: {fp}
 scope_id: {state.scope.scope_id}
 scope_revision: {state.scope.version}
+goal_contract_id: {gc['goal_id'] if gc else 'null'}
+goal_revision: {gc['revision'] if gc else 'null'}
+goal_fingerprint: {gc['fingerprint'] if gc else 'null'}
 
 source_agent:
   actor_type: ai_execution_agent

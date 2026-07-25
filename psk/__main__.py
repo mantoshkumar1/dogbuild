@@ -12,7 +12,8 @@ import json
 import sys
 
 from . import (__version__, agentmode, brief as brief_mod, context, core,
-               declaration, gitutil, handoff as handoff_mod, identity as identity_mod,
+               declaration, genesis as genesis_mod, gitutil, goal as goal_mod,
+               handoff as handoff_mod, identity as identity_mod, park as park_mod,
                registry, review, store)
 from .errors import (
     AmbiguousContextError,
@@ -170,10 +171,63 @@ def _cmd_review_gate(args) -> int:
 
 
 def _cmd_brief(args) -> int:
-    fields, conflicts = brief_mod.build(args.path)
-    _emit(brief_mod.render_text(fields, conflicts),
-          {**fields, "conflicts": conflicts}, args.json)
+    fields, warnings = brief_mod.build(args.path)
+    _emit(brief_mod.render_text(fields, warnings),
+          {**fields, "warnings": warnings}, args.json)
     return SUCCESS
+
+
+def _cmd_genesis_import(args) -> int:
+    gc = genesis_mod.import_genesis(args.path, args.packet_file, approved_at=args.approved_at or "")
+    _emit(f"Imported project genesis: {gc['product_name']} (goal rev {gc['revision']}, "
+          f"fingerprint {gc['fingerprint'][:12]}); milestone: {gc['current_milestone']}",
+          gc, args.json)
+    return SUCCESS
+
+
+def _cmd_genesis_show(args) -> int:
+    _emit_json_or(genesis_mod.show(args.path), args.json,
+                  lambda gc: f"{gc['product_name']} — milestone: {gc['current_milestone']}")
+    return SUCCESS
+
+
+def _cmd_goal_show(args) -> int:
+    _emit_json_or(goal_mod.show(args.path), args.json,
+                  lambda gc: f"{gc['product_name']} goal rev {gc['revision']}: {gc['current_milestone']}")
+    return SUCCESS
+
+
+def _cmd_goal_verify(args) -> int:
+    v = goal_mod.verify(args.path)
+    human = f"goal verify: {'OK' if v['ok'] else 'FAILED'} (rev {v['revision']})\n" + \
+            "".join(f"  {k}: {val}\n" for k, val in v["checks"].items())
+    _emit(human, v, args.json)
+    return SUCCESS
+
+
+def _cmd_park_add(args) -> int:
+    idea = park_mod.add(args.path, title=args.title, reason=args.reason, phase=args.phase)
+    _emit(f"Parked: {idea['title']} (phase: {idea['phase']})", idea, args.json)
+    return SUCCESS
+
+
+def _cmd_park_list(args) -> int:
+    ideas = park_mod.lst(args.path)
+    if args.json:
+        print(json.dumps(ideas, indent=2, sort_keys=True))
+    else:
+        if not ideas:
+            print("(no parked ideas)")
+        for i in ideas:
+            print(f"- [{i['status']}] {i['title']}  (phase: {i['phase']})")
+    return SUCCESS
+
+
+def _emit_json_or(obj, as_json, human_fn) -> None:
+    if as_json:
+        print(json.dumps(obj, indent=2, sort_keys=True))
+    else:
+        print(human_fn(obj))
 
 
 def _cmd_declare(args) -> int:
@@ -182,6 +236,8 @@ def _cmd_declare(args) -> int:
         args.path, building=args.building, changed=args.changed,
         verified=args.verified, failed=args.failed, incomplete=args.incomplete,
         next_action=args.next_action, actor_name=args.actor or "claude",
+        alignment_status=args.alignment, goal_revision=args.goal_rev,
+        alignment_explanation=args.alignment_why or "",
     )
     _emit(f"Recorded declaration by {d['actor_name']} (claimed_head "
           f"{(d['claimed_head'] or 'unborn')[:12]})", d, args.json)
@@ -328,6 +384,10 @@ def _build_parser() -> argparse.ArgumentParser:
     dcl.add_argument("--incomplete", default="None")
     dcl.add_argument("--next", dest="next_action", required=True)
     dcl.add_argument("--actor", default="claude")
+    dcl.add_argument("--alignment", default="IN_SCOPE",
+                     choices=["IN_SCOPE", "PARKED_IDEA", "NEEDS_HUMAN_SCOPE_CHANGE"])
+    dcl.add_argument("--goal-rev", dest="goal_rev", type=int, default=None)
+    dcl.add_argument("--alignment-why", dest="alignment_why", default=None)
     dcl.add_argument("--json", action="store_true")
     dcl.set_defaults(func=_cmd_declare)
 
@@ -355,6 +415,47 @@ def _build_parser() -> argparse.ArgumentParser:
     hco.add_argument("--as", dest="as_agent", default=None)
     hco.add_argument("--json", action="store_true")
     hco.set_defaults(func=_cmd_handoff_consume)
+
+    # genesis: turn an approved discussion into a project contract
+    pg = sub.add_parser("genesis", help="project genesis (approved contract) import/show")
+    gsub = pg.add_subparsers(dest="genesis_cmd", required=True)
+    gi = gsub.add_parser("import", help="import an approved Genesis Packet")
+    gi.add_argument("packet_file")
+    gi.add_argument("path", nargs="?", default=".")
+    gi.add_argument("--approved-at", dest="approved_at", default=None)
+    gi.add_argument("--json", action="store_true")
+    gi.set_defaults(func=_cmd_genesis_import)
+    gs = gsub.add_parser("show", help="show the imported genesis / goal contract")
+    gs.add_argument("path", nargs="?", default=".")
+    gs.add_argument("--json", action="store_true")
+    gs.set_defaults(func=_cmd_genesis_show)
+
+    # goal: the active Goal Contract
+    pgl = sub.add_parser("goal", help="active goal contract show/verify")
+    glsub = pgl.add_subparsers(dest="goal_cmd", required=True)
+    gls = glsub.add_parser("show", help="show the active goal contract")
+    gls.add_argument("path", nargs="?", default=".")
+    gls.add_argument("--json", action="store_true")
+    gls.set_defaults(func=_cmd_goal_show)
+    glv = glsub.add_parser("verify", help="verify the active goal contract")
+    glv.add_argument("path", nargs="?", default=".")
+    glv.add_argument("--json", action="store_true")
+    glv.set_defaults(func=_cmd_goal_verify)
+
+    # park: idea parking lot
+    pp = sub.add_parser("park", help="idea parking lot")
+    psub = pp.add_subparsers(dest="park_cmd", required=True)
+    pa = psub.add_parser("add", help="park an out-of-scope idea")
+    pa.add_argument("path", nargs="?", default=".")
+    pa.add_argument("--title", required=True)
+    pa.add_argument("--reason", required=True)
+    pa.add_argument("--phase", default="future")
+    pa.add_argument("--json", action="store_true")
+    pa.set_defaults(func=_cmd_park_add)
+    pl = psub.add_parser("list", help="list parked ideas")
+    pl.add_argument("path", nargs="?", default=".")
+    pl.add_argument("--json", action="store_true")
+    pl.set_defaults(func=_cmd_park_list)
 
     return p
 

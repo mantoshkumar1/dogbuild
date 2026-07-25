@@ -79,6 +79,9 @@ class EventType(str, enum.Enum):
     HANDOFF_CREATED = "handoff_created"
     HANDOFF_CONSUMED = "handoff_consumed"
     MODE_SET = "mode_set"
+    GENESIS_IMPORTED = "genesis_imported"
+    GOAL_SET = "goal_set"
+    IDEA_PARKED = "idea_parked"
 
 
 # Reserved human-only approvals — always require the human, never auto-performed.
@@ -119,6 +122,7 @@ class Scope:
     version: int
     set_at: str
     scope_id: str = ""  # stable across revisions; version is the revision number
+    goal_revision: Optional[int] = None  # the Goal Contract revision this scope serves
 
 
 @dataclass
@@ -195,6 +199,9 @@ class ProjectState:
     reviews: Dict[str, dict] = field(default_factory=dict)
     # Agent handoff packets keyed by packet_id (plain dicts).
     handoffs: Dict[str, dict] = field(default_factory=dict)
+    # The active, human-approved Goal Contract (plain dict) and parked ideas.
+    goal_contract: Optional[dict] = None
+    parked_ideas: List[dict] = field(default_factory=list)
     last_checkpoint_id: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -324,5 +331,7 @@ def _state_from_dict(d: dict) -> ProjectState:
         checkpoints={k: _checkpoint_from(v) for k, v in d.get("checkpoints", {}).items()},
         reviews={k: dict(v) for k, v in d.get("reviews", {}).items()},
         handoffs={k: dict(v) for k, v in d.get("handoffs", {}).items()},
+        goal_contract=(dict(d["goal_contract"]) if d.get("goal_contract") else None),
+        parked_ideas=[dict(x) for x in d.get("parked_ideas", [])],
         last_checkpoint_id=d.get("last_checkpoint_id"),
     )

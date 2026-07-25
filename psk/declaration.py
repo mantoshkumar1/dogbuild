@@ -21,8 +21,16 @@ def decl_path(root: str) -> Path:
     return Path(root) / store.AI_DIR / DECL_FILE
 
 
+ALIGNMENT_STATES = ("IN_SCOPE", "PARKED_IDEA", "NEEDS_HUMAN_SCOPE_CHANGE")
+
+
 def record(root: str, *, building: str, changed: str, verified: str, failed: str,
-           incomplete: str, next_action: str, actor_name: str = "claude") -> dict:
+           incomplete: str, next_action: str, actor_name: str = "claude",
+           alignment_status: str = "IN_SCOPE", goal_revision=None,
+           alignment_explanation: str = "") -> dict:
+    from .errors import ValidationError
+    if alignment_status not in ALIGNMENT_STATES:
+        raise ValidationError(f"goal_alignment.status must be one of {ALIGNMENT_STATES}")
     root = gitutil.repo_root(root)
     live = gitutil.capture_git_state(root)
     d = {
@@ -37,6 +45,11 @@ def record(root: str, *, building: str, changed: str, verified: str, failed: str
         "failed": failed,
         "incomplete": incomplete,
         "next_action": next_action,
+        "goal_alignment": {
+            "status": alignment_status,
+            "goal_contract_revision": goal_revision,
+            "explanation": alignment_explanation,
+        },
     }
     decl_path(root).parent.mkdir(parents=True, exist_ok=True)
     store.atomic_write(decl_path(root), pretty_json(d))
