@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-25T21:06:33Z
+- **State updated:** 2026-07-25T21:59:52Z
 
 ## Objective
 
@@ -15,20 +15,21 @@ Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state s
 
 ## Active scope
 
-(v5, set 2026-07-25T21:06:33Z)
+(v7, set 2026-07-25T21:59:04Z)
 
-Complete one short, reliable local control loop using ChatGPT as reviewer and Claude as executor.
+Reviewer policy + full exception handling slice
 
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `63211ec5929fcda42fcf16da8dde04df02445ba4`
-- **Worktree:** clean
-- **Captured:** 2026-07-25T21:06:33Z
+- **HEAD:** `e50fe959b1380a4046502189efd8c18ac5ef88a1`
+- **Worktree:** dirty (fingerprint `ab481fee77c7…`)
+- **Captured:** 2026-07-25T21:59:52Z
 
 ## Requested items
 
 - **[done]** Day 4 dogfood: Claude->Claude handoff for where-am-i alias test + doc example (`3d9cf933-3272-4df8-b0b9-7f6bf4f894d0`, updated 2026-07-25T20:47:14Z)
+- **[done]** Day 6: reviewer policy + full exception handling (`4848efa1-c769-4a1d-8932-bc90328b4aae`, updated 2026-07-25T21:59:52Z)
 - **[done]** Day 2: CLI skeleton, exit codes, identity, registry, context commands (`867b4e2d-30bc-4b71-922f-3ef4511626dd`, updated 2026-07-25T19:53:41Z)
 - **[done]** Day 1: canonical project-state schema + store + projection + tests (`98dc8aff-6f86-40f8-8d8a-aa1ed99c77f2`, updated 2026-07-25T18:26:36Z)
 - **[done]** Day 3: first end-to-end review acceptance (real ChatGPT APPROVE) (`d15877ab-2e32-49a9-83af-4d741a66fc73`, updated 2026-07-25T20:27:14Z)
@@ -47,7 +48,13 @@ Complete one short, reliable local control loop using ChatGPT as reviewer and Cl
 
 ## Decisions (records)
 
+- **APPROVE** by chatgpt on `Commit the reviewer-policy slice (implementation + tests)` (commit `e50fe959`, `0410e3fd-c97a-4a35-ae72-8279c6dad9b7`)
+- **APPROVE_WITH_CONDITIONS** by chatgpt on `Doc with conditions` (commit `e50fe959`, `1ee0066e-4e1c-4954-9c86-b6900d3f294f`)
+- **VETO** by chatgpt on `Risky change` (commit `e50fe959`, `36843386-2b42-47a1-b4eb-283aa95cd473`)
 - **APPROVE** by human on `commit Day 1 implementation` (commit `a84e2d1e`, `5799509e-b4fb-4761-a06b-ce8c5db217a2`)
+- **VETO** by chatgpt on `Risky change` (commit `e50fe959`, `62fa803f-6c6d-42ad-af1c-03d17327b6ae`)
+- **NEEDS_HUMAN** by chatgpt on `Add silent paid API calls now` (commit `e50fe959`, `64c47209-9030-486a-961b-d5e9c708749d`)
+- **APPROVE** by chatgpt on `Add a doc` (commit `e50fe959`, `b73f9f7c-0fab-487a-80c5-00e70f54770c`)
 - **APPROVE** by chatgpt on `Add a new file docs/example-review-workflow.md containing a concise, documented example of the completed manual ChatGPT review workflow (request -> upload -> decision -> import -> gate -> action -> checkpoint). Documentation only; no code changes; fully reversible.` (commit `e8986fe7`, `bd3d8db4-1150-4cd8-871f-2406a0e989f4`)
 - **APPROVE** by human on `commit Day 2 implementation` (commit `a84e2d1e`, `c53d8fc6-d8ac-4ece-8240-8bab72b19eac`)
 
@@ -115,5 +122,19 @@ Complete one short, reliable local control loop using ChatGPT as reviewer and Cl
 - Unresolved risks:
   - Codex execution untested
   - full reviewer policy reserved
+  - PAYMENT/DISTRIBUTION unvalidated
+
+### 2026-07-25T21:59:52Z — Day 6 complete: versioned reviewer policy + full gate outcomes + veto revision + human loop
+
+- Implemented:
+  - versioned reviewer policy (show/verify, deterministic fingerprint)
+  - policy+goal bindings on requests/decisions; reject missing/mismatched/stale/unknown
+  - APPROVE/APPROVE_WITH_CONDITIONS/VETO/NEEDS_HUMAN outcomes; conditions tracked
+  - one new-evidence veto revision; second revision rejected
+  - human show/decide + resume verify; brief blocker-vs-warning; monotonic seq determinism
+- Next safe action: Next slice (recommend): package a first usable end-to-end walkthrough OR add the founder-policy enforcement fields to the Goal Contract (small governance-data sync)
+- Unresolved risks:
+  - Codex cross-model execution untested
+  - transport still manual
   - PAYMENT/DISTRIBUTION unvalidated
 

@@ -35,6 +35,39 @@
         "ChatGPT Web cannot inspect tabs/repos — manual packet upload only"
       ]
     },
+    "044dc774-eff1-467c-b25a-f32169c93955": {
+      "created_at": "2026-07-25T21:59:52Z",
+      "evidence_ids": [
+        "5ec5ca5f-4fcf-412a-9dcd-ac5f1d3baeb6"
+      ],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T21:59:52Z",
+        "detached": false,
+        "dirty": true,
+        "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+        "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1"
+      },
+      "id": "044dc774-eff1-467c-b25a-f32169c93955",
+      "implemented": [
+        "versioned reviewer policy (show/verify, deterministic fingerprint)",
+        "policy+goal bindings on requests/decisions; reject missing/mismatched/stale/unknown",
+        "APPROVE/APPROVE_WITH_CONDITIONS/VETO/NEEDS_HUMAN outcomes; conditions tracked",
+        "one new-evidence veto revision; second revision rejected",
+        "human show/decide + resume verify; brief blocker-vs-warning; monotonic seq determinism"
+      ],
+      "next_safe_action": "Next slice (recommend): package a first usable end-to-end walkthrough OR add the founder-policy enforcement fields to the Goal Contract (small governance-data sync)",
+      "summary": "Day 6 complete: versioned reviewer policy + full gate outcomes + veto revision + human loop",
+      "tested": [
+        "88 tests green, stable across repeated runs"
+      ],
+      "unresolved_risks": [
+        "Codex cross-model execution untested",
+        "transport still manual",
+        "PAYMENT/DISTRIBUTION unvalidated"
+      ]
+    },
     "73acbf7d-0357-46d9-ae9f-246bf26bcc5d": {
       "created_at": "2026-07-25T21:06:33Z",
       "evidence_ids": [],
@@ -167,6 +200,57 @@
     }
   },
   "decisions": {
+    "0410e3fd-c97a-4a35-ae72-8279c6dad9b7": {
+      "authority": "chatgpt",
+      "binding": {
+        "action": "Commit the reviewer-policy slice (implementation + tests)",
+        "branch": "main",
+        "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+        "repo_uuid": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+        "scope_version": 7
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:52Z",
+      "evidence_ids": [],
+      "id": "0410e3fd-c97a-4a35-ae72-8279c6dad9b7",
+      "rationale": "slice complete, tests green",
+      "verdict": "APPROVE"
+    },
+    "1ee0066e-4e1c-4954-9c86-b6900d3f294f": {
+      "authority": "chatgpt",
+      "binding": {
+        "action": "Doc with conditions",
+        "branch": "main",
+        "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+        "repo_uuid": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+        "scope_version": 7
+      },
+      "conditions": [
+        "keep it doc-only",
+        "add a test"
+      ],
+      "created_at": "2026-07-25T21:59:04Z",
+      "evidence_ids": [],
+      "id": "1ee0066e-4e1c-4954-9c86-b6900d3f294f",
+      "rationale": "fixture",
+      "verdict": "APPROVE_WITH_CONDITIONS"
+    },
+    "36843386-2b42-47a1-b4eb-283aa95cd473": {
+      "authority": "chatgpt",
+      "binding": {
+        "action": "Risky change",
+        "branch": "main",
+        "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+        "repo_uuid": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+        "scope_version": 7
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:05Z",
+      "evidence_ids": [],
+      "id": "36843386-2b42-47a1-b4eb-283aa95cd473",
+      "rationale": "fixture",
+      "verdict": "VETO"
+    },
     "5799509e-b4fb-4761-a06b-ce8c5db217a2": {
       "authority": "human",
       "binding": {
@@ -183,6 +267,54 @@
       ],
       "id": "5799509e-b4fb-4761-a06b-ce8c5db217a2",
       "rationale": "Founder-directed build decision; Day 1 scope complete and tested.",
+      "verdict": "APPROVE"
+    },
+    "62fa803f-6c6d-42ad-af1c-03d17327b6ae": {
+      "authority": "chatgpt",
+      "binding": {
+        "action": "Risky change",
+        "branch": "main",
+        "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+        "repo_uuid": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+        "scope_version": 7
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:04Z",
+      "evidence_ids": [],
+      "id": "62fa803f-6c6d-42ad-af1c-03d17327b6ae",
+      "rationale": "fixture",
+      "verdict": "VETO"
+    },
+    "64c47209-9030-486a-961b-d5e9c708749d": {
+      "authority": "chatgpt",
+      "binding": {
+        "action": "Add silent paid API calls now",
+        "branch": "main",
+        "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+        "repo_uuid": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+        "scope_version": 7
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:05Z",
+      "evidence_ids": [],
+      "id": "64c47209-9030-486a-961b-d5e9c708749d",
+      "rationale": "fixture",
+      "verdict": "NEEDS_HUMAN"
+    },
+    "b73f9f7c-0fab-487a-80c5-00e70f54770c": {
+      "authority": "chatgpt",
+      "binding": {
+        "action": "Add a doc",
+        "branch": "main",
+        "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+        "repo_uuid": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+        "scope_version": 7
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:04Z",
+      "evidence_ids": [],
+      "id": "b73f9f7c-0fab-487a-80c5-00e70f54770c",
+      "rationale": "fixture",
       "verdict": "APPROVE"
     },
     "bd3d8db4-1150-4cd8-871f-2406a0e989f4": {
@@ -229,6 +361,14 @@
       "source": "",
       "summary": "38 tests pass (26 Day 1 + 12 Day 2)"
     },
+    "5ec5ca5f-4fcf-412a-9dcd-ac5f1d3baeb6": {
+      "captured_at": "2026-07-25T21:59:52Z",
+      "detail": "",
+      "id": "5ec5ca5f-4fcf-412a-9dcd-ac5f1d3baeb6",
+      "kind": "test",
+      "source": "",
+      "summary": "88 tests pass (deterministic across runs)"
+    },
     "8bbe5c3d-f53c-445c-9764-65f3dfdf64af": {
       "captured_at": "2026-07-25T18:26:36Z",
       "detail": "python -m unittest discover -t . -s tests -> OK",
@@ -256,11 +396,11 @@
   },
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-25T21:06:33Z",
+    "captured_at": "2026-07-25T21:59:52Z",
     "detached": false,
-    "dirty": false,
-    "dirty_fingerprint": null,
-    "head_commit": "63211ec5929fcda42fcf16da8dde04df02445ba4"
+    "dirty": true,
+    "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+    "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1"
   },
   "goal_contract": {
     "acceptance_criteria": [
@@ -329,6 +469,7 @@
       "task": "Add a CLI-level test confirming `statekeeper where-am-i` is an alias of `statekeeper brief` for human-readable output (JSON alias already covered), and add one concise `where-am-i` command example to the documentation."
     }
   },
+  "human_decisions": {},
   "identity": {
     "created_at": "2026-07-25T18:26:36Z",
     "psk_uuid": "e29a3a07-7a2c-4f9d-a44c-127e30fd89be",
@@ -346,6 +487,17 @@
       "id": "3d9cf933-3272-4df8-b0b9-7f6bf4f894d0",
       "status": "done",
       "updated_at": "2026-07-25T20:47:14Z"
+    },
+    "4848efa1-c769-4a1d-8932-bc90328b4aae": {
+      "created_at": "2026-07-25T21:59:52Z",
+      "decision_ids": [],
+      "description": "Day 6: reviewer policy + full exception handling",
+      "evidence_ids": [
+        "5ec5ca5f-4fcf-412a-9dcd-ac5f1d3baeb6"
+      ],
+      "id": "4848efa1-c769-4a1d-8932-bc90328b4aae",
+      "status": "done",
+      "updated_at": "2026-07-25T21:59:52Z"
     },
     "867b4e2d-30bc-4b71-922f-3ef4511626dd": {
       "created_at": "2026-07-25T19:53:41Z",
@@ -381,7 +533,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "73acbf7d-0357-46d9-ae9f-246bf26bcc5d",
+  "last_checkpoint_id": "044dc774-eff1-467c-b25a-f32169c93955",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -441,6 +593,15 @@
       "status": "parked",
       "timestamp": "2026-07-25T21:06:33Z",
       "title": "Marketplace and payment packaging"
+    },
+    {
+      "id": "3d3285a9-2bf9-4225-aa98-23fbd41501b2",
+      "phase": "later",
+      "reason": "outside current milestone",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-07-25T21:59:05Z",
+      "title": "Build project forecasting now"
     }
   ],
   "reserved_approvals": [
@@ -455,6 +616,89 @@
     "scope_change"
   ],
   "reviews": {
+    "0d5a7883-fb82-42e0-b6a0-5334e5d789b6": {
+      "action": "Add a doc",
+      "branch": "main",
+      "conditions": [],
+      "created_at": "2026-07-25T21:57:04Z",
+      "decision_id": null,
+      "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+      "goal_contract_fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+      "goal_contract_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+      "goal_contract_revision": 1,
+      "head_commit": "3e456568da10e2a08fff98bbd13780ac33e6e708",
+      "packet_id": "0d5a7883-fb82-42e0-b6a0-5334e5d789b6",
+      "packet_type": "review_request",
+      "parent_packet": null,
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Proceed?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "review_policy_fingerprint": "27a597e96d6188204a16556edaa47ac9d1ef95a0efa85944d91b642e7a051371",
+      "review_policy_id": "dogbuild-default-reviewer",
+      "review_policy_version": "1",
+      "revision_count": 0,
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 6,
+      "seq": 0,
+      "status": "pending",
+      "verdict": null
+    },
+    "43f19496-90ed-47af-b2ec-01eff51bfdbc": {
+      "action": "Add silent paid API calls now",
+      "branch": "main",
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:05Z",
+      "decision_id": "64c47209-9030-486a-961b-d5e9c708749d",
+      "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+      "goal_contract_fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+      "goal_contract_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+      "goal_contract_revision": 1,
+      "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+      "imported_at": "2026-07-25T21:59:05Z",
+      "packet_id": "43f19496-90ed-47af-b2ec-01eff51bfdbc",
+      "packet_type": "review_request",
+      "parent_packet": null,
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Proceed?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "review_policy_fingerprint": "27a597e96d6188204a16556edaa47ac9d1ef95a0efa85944d91b642e7a051371",
+      "review_policy_id": "dogbuild-default-reviewer",
+      "review_policy_version": "1",
+      "revision_count": 0,
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 7,
+      "seq": 5,
+      "status": "imported",
+      "verdict": "NEEDS_HUMAN"
+    },
+    "5f2d417c-e52b-48ec-84e4-64f7dc03502a": {
+      "action": "Add a doc",
+      "branch": "main",
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:04Z",
+      "decision_id": "b73f9f7c-0fab-487a-80c5-00e70f54770c",
+      "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+      "goal_contract_fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+      "goal_contract_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+      "goal_contract_revision": 1,
+      "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+      "imported_at": "2026-07-25T21:59:04Z",
+      "packet_id": "5f2d417c-e52b-48ec-84e4-64f7dc03502a",
+      "packet_type": "review_request",
+      "parent_packet": null,
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Proceed?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "review_policy_fingerprint": "27a597e96d6188204a16556edaa47ac9d1ef95a0efa85944d91b642e7a051371",
+      "review_policy_id": "dogbuild-default-reviewer",
+      "review_policy_version": "1",
+      "revision_count": 0,
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 7,
+      "seq": 1,
+      "status": "imported",
+      "verdict": "APPROVE"
+    },
     "84e83faf-8c83-4961-a695-38b8804e0859": {
       "action": "Add a new file docs/example-review-workflow.md containing a concise, documented example of the completed manual ChatGPT review workflow (request -> upload -> decision -> import -> gate -> action -> checkpoint). Documentation only; no code changes; fully reversible.",
       "branch": "main",
@@ -472,15 +716,136 @@
       "scope_revision": 3,
       "status": "imported",
       "verdict": "APPROVE"
+    },
+    "897f6c67-3320-45d4-b300-485c8eb94607": {
+      "action": "Commit the reviewer-policy slice (implementation + tests)",
+      "branch": "main",
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:52Z",
+      "decision_id": "0410e3fd-c97a-4a35-ae72-8279c6dad9b7",
+      "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+      "goal_contract_fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+      "goal_contract_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+      "goal_contract_revision": 1,
+      "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+      "imported_at": "2026-07-25T21:59:52Z",
+      "packet_id": "897f6c67-3320-45d4-b300-485c8eb94607",
+      "packet_type": "review_request",
+      "parent_packet": null,
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Approve the completed reviewer-policy slice?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "review_policy_fingerprint": "27a597e96d6188204a16556edaa47ac9d1ef95a0efa85944d91b642e7a051371",
+      "review_policy_id": "dogbuild-default-reviewer",
+      "review_policy_version": "1",
+      "revision_count": 0,
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 7,
+      "seq": 6,
+      "status": "imported",
+      "verdict": "APPROVE"
+    },
+    "aed7b7c0-f8c3-4737-b7ed-00cd689f5353": {
+      "action": "Doc with conditions",
+      "branch": "main",
+      "conditions": [
+        {
+          "status": "open",
+          "text": "keep it doc-only"
+        },
+        {
+          "status": "open",
+          "text": "add a test"
+        }
+      ],
+      "created_at": "2026-07-25T21:59:04Z",
+      "decision_id": "1ee0066e-4e1c-4954-9c86-b6900d3f294f",
+      "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+      "goal_contract_fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+      "goal_contract_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+      "goal_contract_revision": 1,
+      "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+      "imported_at": "2026-07-25T21:59:04Z",
+      "packet_id": "aed7b7c0-f8c3-4737-b7ed-00cd689f5353",
+      "packet_type": "review_request",
+      "parent_packet": null,
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Proceed?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "review_policy_fingerprint": "27a597e96d6188204a16556edaa47ac9d1ef95a0efa85944d91b642e7a051371",
+      "review_policy_id": "dogbuild-default-reviewer",
+      "review_policy_version": "1",
+      "revision_count": 0,
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 7,
+      "seq": 2,
+      "status": "imported",
+      "verdict": "APPROVE_WITH_CONDITIONS"
+    },
+    "e7339e5e-45d9-4f3a-afe1-e24fb58aec06": {
+      "action": "Risky change",
+      "branch": "main",
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:04Z",
+      "decision_id": "62fa803f-6c6d-42ad-af1c-03d17327b6ae",
+      "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+      "goal_contract_fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+      "goal_contract_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+      "goal_contract_revision": 1,
+      "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+      "imported_at": "2026-07-25T21:59:04Z",
+      "packet_id": "e7339e5e-45d9-4f3a-afe1-e24fb58aec06",
+      "packet_type": "review_request",
+      "parent_packet": null,
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Proceed?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "review_policy_fingerprint": "27a597e96d6188204a16556edaa47ac9d1ef95a0efa85944d91b642e7a051371",
+      "review_policy_id": "dogbuild-default-reviewer",
+      "review_policy_version": "1",
+      "revision_count": 0,
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 7,
+      "seq": 3,
+      "status": "revised",
+      "verdict": "VETO"
+    },
+    "f8feeaa3-24d2-464d-bac9-2a64765d126d": {
+      "action": "Risky change",
+      "branch": "main",
+      "conditions": [],
+      "created_at": "2026-07-25T21:59:05Z",
+      "decision_id": "36843386-2b42-47a1-b4eb-283aa95cd473",
+      "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
+      "goal_contract_fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+      "goal_contract_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+      "goal_contract_revision": 1,
+      "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1",
+      "imported_at": "2026-07-25T21:59:05Z",
+      "packet_id": "f8feeaa3-24d2-464d-bac9-2a64765d126d",
+      "packet_type": "review_request",
+      "parent_packet": "e7339e5e-45d9-4f3a-afe1-e24fb58aec06",
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Proceed?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "review_policy_fingerprint": "27a597e96d6188204a16556edaa47ac9d1ef95a0efa85944d91b642e7a051371",
+      "review_policy_id": "dogbuild-default-reviewer",
+      "review_policy_version": "1",
+      "revision_count": 1,
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 7,
+      "seq": 4,
+      "status": "imported",
+      "verdict": "VETO"
     }
   },
   "schema_version": "1.0.0",
   "scope": {
-    "description": "Complete one short, reliable local control loop using ChatGPT as reviewer and Claude as executor.",
-    "goal_revision": 1,
+    "description": "Reviewer policy + full exception handling slice",
+    "goal_revision": null,
     "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
-    "set_at": "2026-07-25T21:06:33Z",
-    "version": 5
+    "set_at": "2026-07-25T21:59:04Z",
+    "version": 7
   },
-  "updated_at": "2026-07-25T21:06:33Z"
+  "updated_at": "2026-07-25T21:59:52Z"
 }
