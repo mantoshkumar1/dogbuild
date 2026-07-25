@@ -19,6 +19,9 @@ from urllib.parse import urlsplit, urlunsplit
 from .errors import GitError, NotAGitRepoError
 from .util import now_iso, sha256_hex
 
+# PSK's own bookkeeping directory, excluded from dirty/stale detection.
+_AI_DIR = ".ai"
+
 
 def _run(repo: str, args: List[str], check: bool = True) -> subprocess.CompletedProcess:
     proc = subprocess.run(
@@ -68,6 +71,24 @@ def porcelain_status(path: str) -> str:
     return _run(path, ["status", "--porcelain=v1"]).stdout
 
 
+def _significant_porcelain(path: str) -> str:
+    """Porcelain status excluding PSK's own `.ai/` bookkeeping — so the tool
+    writing its own state does not mark the repository dirty/stale. Only real
+    code/content changes count."""
+    kept = []
+    for line in porcelain_status(path).splitlines():
+        if not line.strip():
+            continue
+        p = line[3:] if len(line) > 3 else ""
+        if " -> " in p:  # rename: use the destination path
+            p = p.split(" -> ")[-1]
+        p = p.strip().strip('"')
+        if p == _AI_DIR or p.startswith(_AI_DIR + "/"):
+            continue
+        kept.append(line)
+    return ("\n".join(kept) + "\n") if kept else ""
+
+
 def sanitize_remote_url(url: str) -> str:
     """Strip credentials/tokens from a remote URL before we store it."""
     if not url:
@@ -97,7 +118,7 @@ def remotes(path: str) -> List[str]:
 def capture_git_state(path: str) -> dict:
     """A plain-dict snapshot of the repo's git state (facts, at capture time)."""
     detached = is_detached(path)
-    porcelain = porcelain_status(path)
+    porcelain = _significant_porcelain(path)  # excludes .ai/ bookkeeping
     dirty = bool(porcelain.strip())
     return {
         "branch": current_branch(path),

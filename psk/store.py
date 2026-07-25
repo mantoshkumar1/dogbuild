@@ -51,6 +51,11 @@ def state_exists(repo_root: str) -> bool:
     return state_path(repo_root).exists()
 
 
+def atomic_write(path, text: str) -> None:
+    """Public atomic write (temp file + os.replace), used by sibling modules."""
+    _atomic_write(Path(path), text)
+
+
 def _atomic_write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".psk-", suffix=".tmp")

@@ -29,3 +29,11 @@ class ValidationError(PSKError):
 
 class IncompatibleStateError(ValidationError):
     """State exists but its schema version is not compatible with this build."""
+
+
+class AmbiguousContextError(PSKError):
+    """Two or more projects remain plausible; execution must stop and ask."""
+
+
+class ProjectMismatchError(PSKError):
+    """An imported artifact claims a different repository/project than the local one."""

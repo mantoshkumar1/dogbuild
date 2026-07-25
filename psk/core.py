@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from . import gitutil, store
+from . import gitutil, identity as identity_mod, store
 from .errors import StateExistsError
 from .models import (
     DEFAULT_RESERVED,
@@ -52,12 +52,18 @@ def _event(type_: EventType, actor: str, **payload) -> Event:
 
 
 def initialize(path: str, *, objective: Optional[str] = None, actor: str = "human",
-               force: bool = False) -> ProjectState:
+               force: bool = False, display_name: Optional[str] = None,
+               aliases: Optional[list] = None, parent_name: Optional[str] = None,
+               parent_record: Optional[str] = None) -> ProjectState:
     root = gitutil.repo_root(path)  # raises NotAGitRepoError if not a repo
     if store.state_exists(root) and not force:
         raise StateExistsError(
             f"{store.state_path(root)} already exists; pass force=True to reinitialize"
         )
+    # Persistent project/repository identity (created once, stable across moves).
+    # Does NOT touch the global registry — the CLI layer registers explicitly.
+    identity_mod.ensure_identity(root, display_name=display_name, aliases=aliases,
+                                 parent_name=parent_name, parent_record=parent_record)
     ts = now_iso()
     identity = RepositoryIdentity(
         psk_uuid=new_uuid(),
