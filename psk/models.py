@@ -75,6 +75,10 @@ class EventType(str, enum.Enum):
     CHECKPOINT_CREATED = "checkpoint_created"
     REVIEW_REQUESTED = "review_requested"
     REVIEW_IMPORTED = "review_imported"
+    DECLARATION_RECORDED = "declaration_recorded"
+    HANDOFF_CREATED = "handoff_created"
+    HANDOFF_CONSUMED = "handoff_consumed"
+    MODE_SET = "mode_set"
 
 
 # Reserved human-only approvals — always require the human, never auto-performed.
@@ -189,6 +193,8 @@ class ProjectState:
     checkpoints: Dict[str, Checkpoint] = field(default_factory=dict)
     # Review requests keyed by packet_id (plain dicts — the review slice's records).
     reviews: Dict[str, dict] = field(default_factory=dict)
+    # Agent handoff packets keyed by packet_id (plain dicts).
+    handoffs: Dict[str, dict] = field(default_factory=dict)
     last_checkpoint_id: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -317,5 +323,6 @@ def _state_from_dict(d: dict) -> ProjectState:
         decisions={k: _decision_from(v) for k, v in d.get("decisions", {}).items()},
         checkpoints={k: _checkpoint_from(v) for k, v in d.get("checkpoints", {}).items()},
         reviews={k: dict(v) for k, v in d.get("reviews", {}).items()},
+        handoffs={k: dict(v) for k, v in d.get("handoffs", {}).items()},
         last_checkpoint_id=d.get("last_checkpoint_id"),
     )

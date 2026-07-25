@@ -6,7 +6,7 @@
   "required": ["event_id", "type", "timestamp", "actor", "schema_version"],
   "properties": {
     "event_id": {"type": "string", "minLength": 1},
-    "type": {"enum": ["initialized", "git_captured", "objective_set", "scope_set", "item_requested", "item_status_changed", "evidence_recorded", "decision_recorded", "checkpoint_created", "review_requested", "review_imported"]},
+    "type": {"enum": ["initialized", "git_captured", "objective_set", "scope_set", "item_requested", "item_status_changed", "evidence_recorded", "decision_recorded", "checkpoint_created", "review_requested", "review_imported", "declaration_recorded", "handoff_created", "handoff_consumed", "mode_set"]},
     "timestamp": {"type": "string"},
     "actor": {"type": "string"},
     "schema_version": {"type": "string"},

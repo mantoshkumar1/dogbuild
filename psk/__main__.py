@@ -11,7 +11,8 @@ import argparse
 import json
 import sys
 
-from . import (__version__, context, core, gitutil, identity as identity_mod,
+from . import (__version__, agentmode, brief as brief_mod, context, core,
+               declaration, gitutil, handoff as handoff_mod, identity as identity_mod,
                registry, review, store)
 from .errors import (
     AmbiguousContextError,
@@ -168,6 +169,52 @@ def _cmd_review_gate(args) -> int:
     return SUCCESS
 
 
+def _cmd_brief(args) -> int:
+    fields, conflicts = brief_mod.build(args.path)
+    _emit(brief_mod.render_text(fields, conflicts),
+          {**fields, "conflicts": conflicts}, args.json)
+    return SUCCESS
+
+
+def _cmd_declare(args) -> int:
+    agentmode.ensure(gitutil.repo_root(args.path))
+    d = declaration.record(
+        args.path, building=args.building, changed=args.changed,
+        verified=args.verified, failed=args.failed, incomplete=args.incomplete,
+        next_action=args.next_action, actor_name=args.actor or "claude",
+    )
+    _emit(f"Recorded declaration by {d['actor_name']} (claimed_head "
+          f"{(d['claimed_head'] or 'unborn')[:12]})", d, args.json)
+    return SUCCESS
+
+
+def _cmd_handoff_create(args) -> int:
+    agentmode.ensure(gitutil.repo_root(args.path))
+    pid, out = handoff_mod.create(
+        args.path, to_agent=args.to, task=args.task,
+        acceptance=args.acceptance or "", next_action=args.next_action or "")
+    _emit(f"Created handoff to {args.to}: {out}", {"packet_id": pid, "path": str(out)},
+          args.json)
+    return SUCCESS
+
+
+def _cmd_handoff_show(args) -> int:
+    rec = handoff_mod.show(args.path)
+    human = (f"Handoff {rec['packet_id']} -> {rec['target_agent']} "
+             f"[{rec['status']}]\nTask: {rec['task']}\n"
+             f"Branch/HEAD: {rec['branch']} @ {rec['head_commit']}\n"
+             f"Instruction source: {rec['instruction_source']}\n")
+    _emit(human, rec, args.json)
+    return SUCCESS
+
+
+def _cmd_handoff_consume(args) -> int:
+    rec = handoff_mod.consume(args.path, packet_id=args.packet, as_agent=args.as_agent)
+    _emit(f"Consumed handoff {rec['packet_id']} as {rec['consumed_by']}; "
+          f"active agent now {rec['target_agent']}", rec, args.json)
+    return SUCCESS
+
+
 def _cmd_reserved(args) -> int:
     print(f"'{args._reserved}' is reserved for a later day (import/selection "
           f"logic). Not implemented in this MVP build.", file=sys.stderr)
@@ -263,6 +310,51 @@ def _build_parser() -> argparse.ArgumentParser:
     rg.add_argument("--packet", default=None)
     rg.add_argument("--json", action="store_true")
     rg.set_defaults(func=_cmd_review_gate)
+
+    # Orientation Brief (brief == where-am-i)
+    for name in ("brief", "where-am-i"):
+        b = sub.add_parser(name, help="one-screen orientation: where am I / what's next")
+        b.add_argument("path", nargs="?", default=".")
+        b.add_argument("--json", action="store_true")
+        b.set_defaults(func=_cmd_brief)
+
+    # working-agent declaration (an agent claim, not canonical truth)
+    dcl = sub.add_parser("declare", help="record a working-agent declaration")
+    dcl.add_argument("path", nargs="?", default=".")
+    dcl.add_argument("--building", required=True)
+    dcl.add_argument("--changed", required=True)
+    dcl.add_argument("--verified", required=True)
+    dcl.add_argument("--failed", default="None")
+    dcl.add_argument("--incomplete", default="None")
+    dcl.add_argument("--next", dest="next_action", required=True)
+    dcl.add_argument("--actor", default="claude")
+    dcl.add_argument("--json", action="store_true")
+    dcl.set_defaults(func=_cmd_declare)
+
+    # generic handoff (agent-neutral: claude now, codex later)
+    ph = sub.add_parser("handoff", help="agent handoff packets")
+    hsub = ph.add_subparsers(dest="handoff_cmd", required=True)
+
+    hc = hsub.add_parser("create", help="create a handoff packet")
+    hc.add_argument("path", nargs="?", default=".")
+    hc.add_argument("--to", required=True, choices=["claude", "codex"])
+    hc.add_argument("--task", required=True)
+    hc.add_argument("--acceptance", default=None)
+    hc.add_argument("--next", dest="next_action", default=None)
+    hc.add_argument("--json", action="store_true")
+    hc.set_defaults(func=_cmd_handoff_create)
+
+    hs = hsub.add_parser("show", help="show the latest handoff")
+    hs.add_argument("path", nargs="?", default=".")
+    hs.add_argument("--json", action="store_true")
+    hs.set_defaults(func=_cmd_handoff_show)
+
+    hco = hsub.add_parser("consume", help="validate + consume a handoff (receiving agent)")
+    hco.add_argument("path", nargs="?", default=".")
+    hco.add_argument("--packet", default=None)
+    hco.add_argument("--as", dest="as_agent", default=None)
+    hco.add_argument("--json", action="store_true")
+    hco.set_defaults(func=_cmd_handoff_consume)
 
     return p
 
