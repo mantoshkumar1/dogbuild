@@ -14,7 +14,8 @@ import sys
 from . import (__version__, agentmode, brief as brief_mod, context, core,
                declaration, genesis as genesis_mod, gitutil, goal as goal_mod,
                handoff as handoff_mod, human as human_mod, identity as identity_mod,
-               park as park_mod, policy as policy_mod, registry, review, store)
+               install as install_mod, park as park_mod, policy as policy_mod,
+               registry, review, store)
 from .errors import (
     AmbiguousContextError,
     IncompatibleStateError,
@@ -322,6 +323,23 @@ def _cmd_reserved(args) -> int:
     return SUCCESS
 
 
+def _cmd_install_claude(args) -> int:
+    res = install_mod.install_claude_skill(skills_root=args.dest, dry_run=args.dry_run)
+    verb = {
+        "up_to_date": "already up to date",
+        "installed": "installed",
+        "updated": "updated",
+        "would_install": "would install",
+        "would_update": "would update",
+    }[res["status"]]
+    n = len(res["changed"])
+    detail = ""
+    if n:
+        detail = f" ({n} file(s) {'to write' if args.dry_run else 'written'})"
+    _emit(f"DogBuild Claude skill {verb}: {res['dest']}{detail}\n", res, args.json)
+    return SUCCESS
+
+
 # --------------------------------------------------------------------------- #
 # parser
 # --------------------------------------------------------------------------- #
@@ -542,6 +560,16 @@ def _build_parser() -> argparse.ArgumentParser:
     rsv.add_argument("--decision", default=None)
     rsv.add_argument("--json", action="store_true")
     rsv.set_defaults(func=_cmd_resume_verify)
+
+    # install: put the canonical Claude skill in the user-level skills dir (offline)
+    pins = sub.add_parser("install", help="install DogBuild integrations (offline)")
+    inssub = pins.add_subparsers(dest="install_cmd", required=True)
+    insc = inssub.add_parser("claude", help="install/update the DogBuild Claude skill")
+    insc.add_argument("--dest", default=None,
+                      help="skills root (default: ~/.claude/skills or $CLAUDE_SKILLS_DIR)")
+    insc.add_argument("--dry-run", action="store_true", help="show changes; write nothing")
+    insc.add_argument("--json", action="store_true")
+    insc.set_defaults(func=_cmd_install_claude)
 
     return p
 

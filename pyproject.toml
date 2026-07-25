@@ -17,10 +17,11 @@ dev = []
 
 [project.scripts]
 statekeeper = "psk.__main__:main"
+dogbuild = "psk.__main__:main"
 psk = "psk.__main__:main"
 
 [tool.setuptools]
 packages = ["psk"]
 
 [tool.setuptools.package-data]
-psk = ["schemas/*.json", "policies/*.yaml"]
+psk = ["schemas/*.json", "policies/*.yaml", "skills/dogbuild/*.md"]
