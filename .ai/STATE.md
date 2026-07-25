@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-25T20:27:15Z
+- **State updated:** 2026-07-25T20:47:15Z
 
 ## Objective
 
@@ -15,19 +15,20 @@ Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state s
 
 ## Active scope
 
-(v3, set 2026-07-25T20:11:39Z)
+(v4, set 2026-07-25T20:45:53Z)
 
-Day 3: first end-to-end manual ChatGPT review happy path
+Day 4: Orientation Brief + generic handoff slice
 
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `e8986fe796cd12bd17d5d171cfd04fe45bcda4ba`
-- **Worktree:** dirty (fingerprint `0fbf2b8cfe0f…`)
-- **Captured:** 2026-07-25T20:27:15Z
+- **HEAD:** `019f519bdc8b2fced7bf2e7197d7b62e028180d1`
+- **Worktree:** dirty (fingerprint `c290a8eaf7c1…`)
+- **Captured:** 2026-07-25T20:47:15Z
 
 ## Requested items
 
+- **[done]** Day 4 dogfood: Claude->Claude handoff for where-am-i alias test + doc example (`3d9cf933-3272-4df8-b0b9-7f6bf4f894d0`, updated 2026-07-25T20:47:14Z)
 - **[done]** Day 2: CLI skeleton, exit codes, identity, registry, context commands (`867b4e2d-30bc-4b71-922f-3ef4511626dd`, updated 2026-07-25T19:53:41Z)
 - **[done]** Day 1: canonical project-state schema + store + projection + tests (`98dc8aff-6f86-40f8-8d8a-aa1ed99c77f2`, updated 2026-07-25T18:26:36Z)
 - **[done]** Day 3: first end-to-end review acceptance (real ChatGPT APPROVE) (`d15877ab-2e32-49a9-83af-4d741a66fc73`, updated 2026-07-25T20:27:14Z)
@@ -89,4 +90,17 @@ Day 3: first end-to-end manual ChatGPT review happy path
   - manual courier transport is a temporary proof mechanism, not the product experience (validated problem)
   - founder-orientation-loss: state is machine-readable but not human-glanceable (validated problem)
   - PAYMENT + DISTRIBUTION still unvalidated
+
+### 2026-07-25T20:47:15Z — Day 4 complete: Orientation Brief + generic handoff; real Claude->Claude handoff dogfood
+
+- Implemented:
+  - Orientation Brief (brief/where-am-i + --json) with truth-order conflict display
+  - working-agent declaration; operating mode; generic agent handoff (claude/codex) create/show/consume
+  - single-agent dogfood: declaration -> handoff create -> consume(validate identity/branch/HEAD/scope/freshness) -> delegated task -> tests -> checkpoint
+  - delegated task performed: human-readable where-am-i alias CLI test + doc example
+- Next safe action: Versioned reviewer-policy slice: policy id+version+hash in request/decision, machine-evidence vs agent-claim separation, VETO/APPROVE_WITH_CONDITIONS/NEEDS_HUMAN, one evidence-based revision loop
+- Unresolved risks:
+  - cross-model execution with Codex UNTESTED (Codex unavailable) — Codex handoff generation is tested, execution is not
+  - manual transport still required for ChatGPT reviews (automation not built)
+  - PAYMENT + DISTRIBUTION unvalidated
 

@@ -7,12 +7,12 @@ Answers, for the **human owner**, in under 20 seconds:
 > not only machine-readable by agents.* Not implemented during the Day 3 acceptance
 > (implementing it would change HEAD and invalidate an outstanding review).
 
-## Reserved commands
+## Commands (implemented)
 ```bash
-statekeeper brief
-statekeeper where-am-i
+statekeeper where-am-i        # one-screen orientation (alias of `statekeeper brief`)
+statekeeper brief --json      # same, machine-readable
 ```
-(may initially be aliases of each other.)
+`where-am-i` is an exact alias of `brief` for both human-readable and JSON output.
 
 ## Output (short; target reading time < 20s)
 ```text

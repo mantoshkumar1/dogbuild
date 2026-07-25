@@ -54,6 +54,15 @@ class TestBrief(Base):
         self.assertEqual(j1["project"], j2["project"])          # alias -> same source
         self.assertEqual(j1["current_phase"], j2["current_phase"])
 
+    def test_where_am_i_human_alias(self):
+        # Delegated dogfood task: confirm the alias for HUMAN-READABLE output too
+        # (JSON alias is covered above).
+        c1, o1 = run(["brief", self.root])
+        c2, o2 = run(["where-am-i", self.root])
+        self.assertEqual((c1, c2), (0, 0))
+        self.assertEqual(o1, o2)  # identical output => true alias
+        self.assertIn("Project:", o1)
+
     def test_missing_declaration_is_fine(self):
         self.assertIsNone(declaration.load_latest(self.root))
         fields, conflicts = brief.build(self.root)  # must not crash

@@ -98,6 +98,40 @@
         "founder-orientation-loss: state is machine-readable but not human-glanceable (validated problem)",
         "PAYMENT + DISTRIBUTION still unvalidated"
       ]
+    },
+    "e1aa0088-29d9-4695-a1d7-1eee4cbce702": {
+      "created_at": "2026-07-25T20:47:15Z",
+      "evidence_ids": [
+        "b550ce3f-ff77-4297-9cd5-e7d1a7d631db"
+      ],
+      "failures_resolved": [
+        "none"
+      ],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T20:47:15Z",
+        "detached": false,
+        "dirty": true,
+        "dirty_fingerprint": "c290a8eaf7c1d97be5bce6f2f24d5937f017a11825977f67da1bc970c008085a",
+        "head_commit": "019f519bdc8b2fced7bf2e7197d7b62e028180d1"
+      },
+      "id": "e1aa0088-29d9-4695-a1d7-1eee4cbce702",
+      "implemented": [
+        "Orientation Brief (brief/where-am-i + --json) with truth-order conflict display",
+        "working-agent declaration; operating mode; generic agent handoff (claude/codex) create/show/consume",
+        "single-agent dogfood: declaration -> handoff create -> consume(validate identity/branch/HEAD/scope/freshness) -> delegated task -> tests -> checkpoint",
+        "delegated task performed: human-readable where-am-i alias CLI test + doc example"
+      ],
+      "next_safe_action": "Versioned reviewer-policy slice: policy id+version+hash in request/decision, machine-evidence vs agent-claim separation, VETO/APPROVE_WITH_CONDITIONS/NEEDS_HUMAN, one evidence-based revision loop",
+      "summary": "Day 4 complete: Orientation Brief + generic handoff; real Claude->Claude handoff dogfood",
+      "tested": [
+        "57 unittest tests green"
+      ],
+      "unresolved_risks": [
+        "cross-model execution with Codex UNTESTED (Codex unavailable) — Codex handoff generation is tested, execution is not",
+        "manual transport still required for ChatGPT reviews (automation not built)",
+        "PAYMENT + DISTRIBUTION unvalidated"
+      ]
     }
   },
   "decisions": {
@@ -171,6 +205,14 @@
       "source": "local",
       "summary": "26 unittest tests pass (temp git repos)"
     },
+    "b550ce3f-ff77-4297-9cd5-e7d1a7d631db": {
+      "captured_at": "2026-07-25T20:47:14Z",
+      "detail": "",
+      "id": "b550ce3f-ff77-4297-9cd5-e7d1a7d631db",
+      "kind": "test",
+      "source": "",
+      "summary": "57 tests pass after delegated task"
+    },
     "ea319f5a-8a9c-4b56-a9d4-4ee0f8fdc2ca": {
       "captured_at": "2026-07-25T20:27:15Z",
       "detail": "",
@@ -182,11 +224,34 @@
   },
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-25T20:27:15Z",
+    "captured_at": "2026-07-25T20:47:15Z",
     "detached": false,
     "dirty": true,
-    "dirty_fingerprint": "0fbf2b8cfe0f962236eea0b1cfa744275bba44f5a8318f5ef4682aa886a48795",
-    "head_commit": "e8986fe796cd12bd17d5d171cfd04fe45bcda4ba"
+    "dirty_fingerprint": "c290a8eaf7c1d97be5bce6f2f24d5937f017a11825977f67da1bc970c008085a",
+    "head_commit": "019f519bdc8b2fced7bf2e7197d7b62e028180d1"
+  },
+  "handoffs": {
+    "baa8e579-593d-42f2-b00a-d99a38062c0c": {
+      "acceptance": "New human-alias CLI test passes; full suite green; a doc example added.",
+      "branch": "main",
+      "consumed_at": "2026-07-25T20:45:53Z",
+      "consumed_by": "claude",
+      "created_at": "2026-07-25T20:45:53Z",
+      "diff_fingerprint": null,
+      "head_commit": "019f519bdc8b2fced7bf2e7197d7b62e028180d1",
+      "instruction_source": "chatgpt",
+      "next_action": "Perform only the delegated test + doc change; then checkpoint.",
+      "packet_id": "baa8e579-593d-42f2-b00a-d99a38062c0c",
+      "packet_type": "agent_handoff",
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 4,
+      "source_agent": "claude",
+      "status": "consumed",
+      "target_agent": "claude",
+      "task": "Add a CLI-level test confirming `statekeeper where-am-i` is an alias of `statekeeper brief` for human-readable output (JSON alias already covered), and add one concise `where-am-i` command example to the documentation."
+    }
   },
   "identity": {
     "created_at": "2026-07-25T18:26:36Z",
@@ -195,6 +260,17 @@
     "root": "/Users/mantoshkumar/Desktop/project/project-state-keeper"
   },
   "items": {
+    "3d9cf933-3272-4df8-b0b9-7f6bf4f894d0": {
+      "created_at": "2026-07-25T20:47:14Z",
+      "decision_ids": [],
+      "description": "Day 4 dogfood: Claude->Claude handoff for where-am-i alias test + doc example",
+      "evidence_ids": [
+        "b550ce3f-ff77-4297-9cd5-e7d1a7d631db"
+      ],
+      "id": "3d9cf933-3272-4df8-b0b9-7f6bf4f894d0",
+      "status": "done",
+      "updated_at": "2026-07-25T20:47:14Z"
+    },
     "867b4e2d-30bc-4b71-922f-3ef4511626dd": {
       "created_at": "2026-07-25T19:53:41Z",
       "decision_ids": [],
@@ -229,7 +305,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "ab1fae95-5de0-42d5-bb0a-1c20caf5358d",
+  "last_checkpoint_id": "e1aa0088-29d9-4695-a1d7-1eee4cbce702",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -268,10 +344,10 @@
   },
   "schema_version": "1.0.0",
   "scope": {
-    "description": "Day 3: first end-to-end manual ChatGPT review happy path",
+    "description": "Day 4: Orientation Brief + generic handoff slice",
     "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
-    "set_at": "2026-07-25T20:11:39Z",
-    "version": 3
+    "set_at": "2026-07-25T20:45:53Z",
+    "version": 4
   },
-  "updated_at": "2026-07-25T20:27:15Z"
+  "updated_at": "2026-07-25T20:47:15Z"
 }
