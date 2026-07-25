@@ -1,0 +1,118 @@
+{
+  "checkpoints": {
+    "8200945d-6ad0-4cec-ba19-e701dac7082d": {
+      "created_at": "2026-07-25T18:26:36Z",
+      "evidence_ids": [
+        "8bbe5c3d-f53c-445c-9764-65f3dfdf64af"
+      ],
+      "failures_resolved": [
+        "unborn-branch current_branch: switched rev-parse -> symbolic-ref"
+      ],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T18:26:36Z",
+        "detached": false,
+        "dirty": true,
+        "dirty_fingerprint": "8932ba86595461dd1da36f0fcd72bcf196cb9da29cb2abe8ddcad2c35b061135",
+        "head_commit": "a84e2d1eeb9c4dd1587814dfd0be96d7a558bfff"
+      },
+      "id": "8200945d-6ad0-4cec-ba19-e701dac7082d",
+      "implemented": [
+        ".ai/ dir model: state.json + events.jsonl + STATE.md",
+        "repo identity (persistent UUID), git state + dirty fingerprint, sanitized remotes",
+        "versioned objective/scope, item status model, evidence + decision records, reserved approvals, checkpoints",
+        "JSON schemas, typed models, validation, atomic safe-init serialization, deterministic Markdown projection"
+      ],
+      "next_safe_action": "Day 2: deterministic local CLI skeleton (subcommands, exit codes) over the core API",
+      "summary": "Day 1 complete: canonical schema, store, models, projection, 26 tests green",
+      "tested": [
+        "26 unittest tests across util/gitutil/store/models/projection/core"
+      ],
+      "unresolved_risks": [
+        "PAYMENT + DISTRIBUTION unvalidated (dogfood-first; recorded in revenue-opportunity-lab)",
+        "legacy-Markdown importer not built; authority gate is Day 10"
+      ]
+    }
+  },
+  "decisions": {
+    "5799509e-b4fb-4761-a06b-ce8c5db217a2": {
+      "authority": "human",
+      "binding": {
+        "action": "commit Day 1 implementation",
+        "branch": "main",
+        "head_commit": "a84e2d1eeb9c4dd1587814dfd0be96d7a558bfff",
+        "repo_uuid": "e29a3a07-7a2c-4f9d-a44c-127e30fd89be",
+        "scope_version": 1
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T18:26:36Z",
+      "evidence_ids": [
+        "8bbe5c3d-f53c-445c-9764-65f3dfdf64af"
+      ],
+      "id": "5799509e-b4fb-4761-a06b-ce8c5db217a2",
+      "rationale": "Founder-directed build decision; Day 1 scope complete and tested.",
+      "verdict": "APPROVE"
+    }
+  },
+  "evidence": {
+    "8bbe5c3d-f53c-445c-9764-65f3dfdf64af": {
+      "captured_at": "2026-07-25T18:26:36Z",
+      "detail": "python -m unittest discover -t . -s tests -> OK",
+      "id": "8bbe5c3d-f53c-445c-9764-65f3dfdf64af",
+      "kind": "test",
+      "source": "local",
+      "summary": "26 unittest tests pass (temp git repos)"
+    }
+  },
+  "git_state": {
+    "branch": "main",
+    "captured_at": "2026-07-25T18:26:36Z",
+    "detached": false,
+    "dirty": true,
+    "dirty_fingerprint": "8932ba86595461dd1da36f0fcd72bcf196cb9da29cb2abe8ddcad2c35b061135",
+    "head_commit": "a84e2d1eeb9c4dd1587814dfd0be96d7a558bfff"
+  },
+  "identity": {
+    "created_at": "2026-07-25T18:26:36Z",
+    "psk_uuid": "e29a3a07-7a2c-4f9d-a44c-127e30fd89be",
+    "remotes": [],
+    "root": "/Users/mantoshkumar/Desktop/project/project-state-keeper"
+  },
+  "items": {
+    "98dc8aff-6f86-40f8-8d8a-aa1ed99c77f2": {
+      "created_at": "2026-07-25T18:26:36Z",
+      "decision_ids": [],
+      "description": "Day 1: canonical project-state schema + store + projection + tests",
+      "evidence_ids": [
+        "8bbe5c3d-f53c-445c-9764-65f3dfdf64af"
+      ],
+      "id": "98dc8aff-6f86-40f8-8d8a-aa1ed99c77f2",
+      "status": "done",
+      "updated_at": "2026-07-25T18:26:36Z"
+    }
+  },
+  "last_checkpoint_id": "8200945d-6ad0-4cec-ba19-e701dac7082d",
+  "objective": {
+    "set_at": "2026-07-25T18:26:36Z",
+    "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
+    "version": 1
+  },
+  "reserved_approvals": [
+    "push",
+    "deploy",
+    "merge",
+    "publish",
+    "delete_data",
+    "spend",
+    "external_comm",
+    "secrets_or_prod",
+    "scope_change"
+  ],
+  "schema_version": "1.0.0",
+  "scope": {
+    "description": "Two-week local, file-based MVP (Lite). No API/backend/accounts/payment/GUI.",
+    "set_at": "2026-07-25T18:26:36Z",
+    "version": 1
+  },
+  "updated_at": "2026-07-25T18:26:36Z"
+}
