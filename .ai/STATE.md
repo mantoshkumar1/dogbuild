@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-25T22:33:27Z
+- **State updated:** 2026-07-25T23:30:33Z
 
 ## Objective
 
@@ -22,9 +22,9 @@ Reviewer policy + full exception handling slice
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `883c1fd877199d87d39509e6e9b1eaa95faa3963`
+- **HEAD:** `4c74fb20df690a8b6a5cea9486ffa77a42355599`
 - **Worktree:** clean
-- **Captured:** 2026-07-25T22:33:27Z
+- **Captured:** 2026-07-25T23:30:33Z
 
 ## Requested items
 
@@ -161,4 +161,17 @@ Reviewer policy + full exception handling slice
   - real cross-provider reviewer transport still manual
   - Codex cross-model execution untested
   - PAYMENT/DISTRIBUTION unvalidated
+
+### 2026-07-25T23:30:33Z — Personal alpha packaged: dogbuild command + canonical Claude skill + offline installer; 97 tests green
+
+- Implemented:
+  - dogbuild console-script alias (statekeeper/psk unchanged; no rename)
+  - offline idempotent dogbuild install claude (psk/install.py) with --dry-run
+  - canonical bundled skill psk/skills/dogbuild/SKILL.md
+  - docs/personal-alpha.md (technical vs human view)
+  - tests/test_install_and_skill.py (8 tests)
+- Next safe action: Fresh-session acceptance test in PhotoSahi (What's happening?); do not begin the next milestone
+- Unresolved risks:
+  - external demand / payment / distribution unvalidated
+  - founder real macOS ~/.claude not reachable from this VM (skill delivered as file + install command)
 

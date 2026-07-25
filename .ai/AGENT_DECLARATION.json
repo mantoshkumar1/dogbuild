@@ -1,18 +1,18 @@
 {
   "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "DogBuild: first visible end-to-end user run (+ recovery reconcile)",
-  "changed": "Fixed review-request CLI crash (+CLI regression test); added first-run walkthrough doc; reconciled canonical state; proved a disposable end-to-end walkthrough",
-  "claimed_head": "883c1fd877199d87d39509e6e9b1eaa95faa3963",
-  "created_at": "2026-07-25T22:33:27Z",
-  "failed": "None outstanding (found and fixed a review-request CLI crash that blocked the loop)",
+  "building": "DogBuild personal alpha: dogbuild command + one canonical Claude skill + offline installer",
+  "changed": "Added dogbuild alias; offline idempotent 'dogbuild install claude'; bundled canonical skill (session-start, plain-English STATE_QUERY, delivery-first, latest-evidence, goal-change guard, continuity); docs/personal-alpha.md; tests",
+  "claimed_head": "4c74fb20df690a8b6a5cea9486ffa77a42355599",
+  "created_at": "2026-07-25T23:30:33Z",
+  "failed": "None",
   "goal_alignment": {
-    "explanation": "Completed the first visible user run of the local loop; no governance features added",
+    "explanation": "Smallest usable personal alpha; no dashboards/APIs/automation/Cursor/Codex added",
     "goal_contract_revision": 1,
     "status": "IN_SCOPE"
   },
-  "incomplete": "Real cross-provider reviewer transport still manual; Codex execution untested; PAYMENT/DISTRIBUTION unvalidated",
-  "next_action": "Commit the .ai dogfood state; optionally sync Revenue Opportunity Lab; then choose the next milestone slice",
+  "incomplete": "Founder's real macOS ~/.claude is not reachable from this isolated VM; skill delivered as a file + one-line install command for the founder to run on their Mac",
+  "next_action": "Fresh-session acceptance test: open a new Claude session in PhotoSahi and ask What's happening?",
   "role": "execution_agent",
-  "verified": "89 unittest tests green; disposable walkthrough reached gate PROCEED and created only the approved README; regression test fails without the fix"
+  "verified": "97 unittest tests green (89+8); venv install exposes dogbuild+statekeeper as the same CLI; dogbuild where-am-i works from PhotoSahi; installer dry-run/first/repeat idempotent and preserves unrelated files; skill installed to a user-level skills dir"
 }
