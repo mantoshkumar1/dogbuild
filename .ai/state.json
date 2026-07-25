@@ -1,5 +1,40 @@
 {
   "checkpoints": {
+    "0363c950-7893-44a5-8922-5c82b3f81972": {
+      "created_at": "2026-07-25T19:53:41Z",
+      "evidence_ids": [
+        "37c5b71f-8087-4a08-8957-4e6ec666cdb4"
+      ],
+      "failures_resolved": [
+        "freshness always-stale: exclude .ai/ from dirty detection"
+      ],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T19:53:41Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "e3e732112c89218d5462a480b3e37bf9a626618f"
+      },
+      "id": "0363c950-7893-44a5-8922-5c82b3f81972",
+      "implemented": [
+        "CLI (statekeeper==python -m psk): subcommands, stable exit codes, human+JSON output",
+        "persistent .ai/PROJECT_IDENTITY.json (stable UUIDs, survives moves, remote as hash fingerprint only)",
+        "local registry ~/.project-state-keeper/projects.json (env-overridable; no code/secrets)",
+        "context identify/show/list/register/export --for chatgpt; choose/verify reserved",
+        "resolution outcomes + evidence-priority spec; ChatGPT CONTEXT_INSTRUCTIONS; .ai excluded from dirty/stale"
+      ],
+      "next_safe_action": "Day 3: agent handoff generation (statekeeper handoff) carrying project_id/repository_id + current state, building on the identity/packet-header work",
+      "summary": "Day 2 complete: deterministic CLI + Project Context Resolver, 38 tests green",
+      "tested": [
+        "38 unittest tests (26 Day 1 + 12 Day 2: identity/registry/context/CLI incl. exit codes)"
+      ],
+      "unresolved_risks": [
+        "PAYMENT + DISTRIBUTION unvalidated (dogfood-first)",
+        "AMBIGUOUS/STALE/MISMATCH import-time resolution not built yet (Day 3+); choose/verify reserved",
+        "ChatGPT Web cannot inspect tabs/repos — manual packet upload only"
+      ]
+    },
     "8200945d-6ad0-4cec-ba19-e701dac7082d": {
       "created_at": "2026-07-25T18:26:36Z",
       "evidence_ids": [
@@ -52,9 +87,35 @@
       "id": "5799509e-b4fb-4761-a06b-ce8c5db217a2",
       "rationale": "Founder-directed build decision; Day 1 scope complete and tested.",
       "verdict": "APPROVE"
+    },
+    "c53d8fc6-d8ac-4ece-8240-8bab72b19eac": {
+      "authority": "human",
+      "binding": {
+        "action": "commit Day 2 implementation",
+        "branch": "main",
+        "head_commit": "a84e2d1eeb9c4dd1587814dfd0be96d7a558bfff",
+        "repo_uuid": "e29a3a07-7a2c-4f9d-a44c-127e30fd89be",
+        "scope_version": 2
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T19:53:41Z",
+      "evidence_ids": [
+        "37c5b71f-8087-4a08-8957-4e6ec666cdb4"
+      ],
+      "id": "c53d8fc6-d8ac-4ece-8240-8bab72b19eac",
+      "rationale": "Founder-directed; Day 2 scope complete and tested.",
+      "verdict": "APPROVE"
     }
   },
   "evidence": {
+    "37c5b71f-8087-4a08-8957-4e6ec666cdb4": {
+      "captured_at": "2026-07-25T19:53:41Z",
+      "detail": "python -m unittest discover -t . -s tests -> OK",
+      "id": "37c5b71f-8087-4a08-8957-4e6ec666cdb4",
+      "kind": "test",
+      "source": "",
+      "summary": "38 tests pass (26 Day 1 + 12 Day 2)"
+    },
     "8bbe5c3d-f53c-445c-9764-65f3dfdf64af": {
       "captured_at": "2026-07-25T18:26:36Z",
       "detail": "python -m unittest discover -t . -s tests -> OK",
@@ -66,11 +127,11 @@
   },
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-25T18:26:36Z",
+    "captured_at": "2026-07-25T19:53:41Z",
     "detached": false,
-    "dirty": true,
-    "dirty_fingerprint": "8932ba86595461dd1da36f0fcd72bcf196cb9da29cb2abe8ddcad2c35b061135",
-    "head_commit": "a84e2d1eeb9c4dd1587814dfd0be96d7a558bfff"
+    "dirty": false,
+    "dirty_fingerprint": null,
+    "head_commit": "e3e732112c89218d5462a480b3e37bf9a626618f"
   },
   "identity": {
     "created_at": "2026-07-25T18:26:36Z",
@@ -79,6 +140,17 @@
     "root": "/Users/mantoshkumar/Desktop/project/project-state-keeper"
   },
   "items": {
+    "867b4e2d-30bc-4b71-922f-3ef4511626dd": {
+      "created_at": "2026-07-25T19:53:41Z",
+      "decision_ids": [],
+      "description": "Day 2: CLI skeleton, exit codes, identity, registry, context commands",
+      "evidence_ids": [
+        "37c5b71f-8087-4a08-8957-4e6ec666cdb4"
+      ],
+      "id": "867b4e2d-30bc-4b71-922f-3ef4511626dd",
+      "status": "done",
+      "updated_at": "2026-07-25T19:53:41Z"
+    },
     "98dc8aff-6f86-40f8-8d8a-aa1ed99c77f2": {
       "created_at": "2026-07-25T18:26:36Z",
       "decision_ids": [],
@@ -91,7 +163,7 @@
       "updated_at": "2026-07-25T18:26:36Z"
     }
   },
-  "last_checkpoint_id": "8200945d-6ad0-4cec-ba19-e701dac7082d",
+  "last_checkpoint_id": "0363c950-7893-44a5-8922-5c82b3f81972",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -110,9 +182,9 @@
   ],
   "schema_version": "1.0.0",
   "scope": {
-    "description": "Two-week local, file-based MVP (Lite). No API/backend/accounts/payment/GUI.",
-    "set_at": "2026-07-25T18:26:36Z",
-    "version": 1
+    "description": "Day 2: deterministic CLI + Project Context Resolver",
+    "set_at": "2026-07-25T19:53:41Z",
+    "version": 2
   },
-  "updated_at": "2026-07-25T18:26:36Z"
+  "updated_at": "2026-07-25T19:53:41Z"
 }
