@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-25T19:53:41Z
+- **State updated:** 2026-07-25T20:27:15Z
 
 ## Objective
 
@@ -15,21 +15,22 @@ Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state s
 
 ## Active scope
 
-(v2, set 2026-07-25T19:53:41Z)
+(v3, set 2026-07-25T20:11:39Z)
 
-Day 2: deterministic CLI + Project Context Resolver
+Day 3: first end-to-end manual ChatGPT review happy path
 
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `e3e732112c89218d5462a480b3e37bf9a626618f`
-- **Worktree:** clean
-- **Captured:** 2026-07-25T19:53:41Z
+- **HEAD:** `e8986fe796cd12bd17d5d171cfd04fe45bcda4ba`
+- **Worktree:** dirty (fingerprint `0fbf2b8cfe0f…`)
+- **Captured:** 2026-07-25T20:27:15Z
 
 ## Requested items
 
 - **[done]** Day 2: CLI skeleton, exit codes, identity, registry, context commands (`867b4e2d-30bc-4b71-922f-3ef4511626dd`, updated 2026-07-25T19:53:41Z)
 - **[done]** Day 1: canonical project-state schema + store + projection + tests (`98dc8aff-6f86-40f8-8d8a-aa1ed99c77f2`, updated 2026-07-25T18:26:36Z)
+- **[done]** Day 3: first end-to-end review acceptance (real ChatGPT APPROVE) (`d15877ab-2e32-49a9-83af-4d741a66fc73`, updated 2026-07-25T20:27:14Z)
 
 ## Reserved human-only approvals
 
@@ -46,6 +47,7 @@ Day 2: deterministic CLI + Project Context Resolver
 ## Decisions (records)
 
 - **APPROVE** by human on `commit Day 1 implementation` (commit `a84e2d1e`, `5799509e-b4fb-4761-a06b-ce8c5db217a2`)
+- **APPROVE** by chatgpt on `Add a new file docs/example-review-workflow.md containing a concise, documented example of the completed manual ChatGPT review workflow (request -> upload -> decision -> import -> gate -> action -> checkpoint). Documentation only; no code changes; fully reversible.` (commit `e8986fe7`, `bd3d8db4-1150-4cd8-871f-2406a0e989f4`)
 - **APPROVE** by human on `commit Day 2 implementation` (commit `a84e2d1e`, `c53d8fc6-d8ac-4ece-8240-8bab72b19eac`)
 
 ## Checkpoints (historical claims)
@@ -75,4 +77,16 @@ Day 2: deterministic CLI + Project Context Resolver
   - PAYMENT + DISTRIBUTION unvalidated (dogfood-first)
   - AMBIGUOUS/STALE/MISMATCH import-time resolution not built yet (Day 3+); choose/verify reserved
   - ChatGPT Web cannot inspect tabs/repos — manual packet upload only
+
+### 2026-07-25T20:27:15Z — Day 3 acceptance COMPLETE: real ChatGPT APPROVE imported, gate PROCEED, approved doc added
+
+- Implemented:
+  - review request -> real ChatGPT decision -> import (validated) -> gate PROCEED -> approved action -> checkpoint
+  - decision archived unchanged under .ai/exchange/archive/<packet-id>/
+  - approved action performed: docs/example-review-workflow.md (documentation only, reversible)
+- Next safe action: Next slice: versioned reviewer policy + full outcomes (VETO/APPROVE_WITH_CONDITIONS/NEEDS_HUMAN) + one evidence-based revision loop; then Orientation Brief; then Claude->Codex handoff
+- Unresolved risks:
+  - manual courier transport is a temporary proof mechanism, not the product experience (validated problem)
+  - founder-orientation-loss: state is machine-readable but not human-glanceable (validated problem)
+  - PAYMENT + DISTRIBUTION still unvalidated
 

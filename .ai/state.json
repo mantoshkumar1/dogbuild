@@ -67,6 +67,37 @@
         "PAYMENT + DISTRIBUTION unvalidated (dogfood-first; recorded in revenue-opportunity-lab)",
         "legacy-Markdown importer not built; authority gate is Day 10"
       ]
+    },
+    "ab1fae95-5de0-42d5-bb0a-1c20caf5358d": {
+      "created_at": "2026-07-25T20:27:15Z",
+      "evidence_ids": [
+        "ea319f5a-8a9c-4b56-a9d4-4ee0f8fdc2ca"
+      ],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T20:27:15Z",
+        "detached": false,
+        "dirty": true,
+        "dirty_fingerprint": "0fbf2b8cfe0f962236eea0b1cfa744275bba44f5a8318f5ef4682aa886a48795",
+        "head_commit": "e8986fe796cd12bd17d5d171cfd04fe45bcda4ba"
+      },
+      "id": "ab1fae95-5de0-42d5-bb0a-1c20caf5358d",
+      "implemented": [
+        "review request -> real ChatGPT decision -> import (validated) -> gate PROCEED -> approved action -> checkpoint",
+        "decision archived unchanged under .ai/exchange/archive/<packet-id>/",
+        "approved action performed: docs/example-review-workflow.md (documentation only, reversible)"
+      ],
+      "next_safe_action": "Next slice: versioned reviewer policy + full outcomes (VETO/APPROVE_WITH_CONDITIONS/NEEDS_HUMAN) + one evidence-based revision loop; then Orientation Brief; then Claude->Codex handoff",
+      "summary": "Day 3 acceptance COMPLETE: real ChatGPT APPROVE imported, gate PROCEED, approved doc added",
+      "tested": [
+        "47 unittest tests green after the approved action"
+      ],
+      "unresolved_risks": [
+        "manual courier transport is a temporary proof mechanism, not the product experience (validated problem)",
+        "founder-orientation-loss: state is machine-readable but not human-glanceable (validated problem)",
+        "PAYMENT + DISTRIBUTION still unvalidated"
+      ]
     }
   },
   "decisions": {
@@ -86,6 +117,22 @@
       ],
       "id": "5799509e-b4fb-4761-a06b-ce8c5db217a2",
       "rationale": "Founder-directed build decision; Day 1 scope complete and tested.",
+      "verdict": "APPROVE"
+    },
+    "bd3d8db4-1150-4cd8-871f-2406a0e989f4": {
+      "authority": "chatgpt",
+      "binding": {
+        "action": "Add a new file docs/example-review-workflow.md containing a concise, documented example of the completed manual ChatGPT review workflow (request -> upload -> decision -> import -> gate -> action -> checkpoint). Documentation only; no code changes; fully reversible.",
+        "branch": "main",
+        "head_commit": "e8986fe796cd12bd17d5d171cfd04fe45bcda4ba",
+        "repo_uuid": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+        "scope_version": 3
+      },
+      "conditions": [],
+      "created_at": "2026-07-25T20:26:05Z",
+      "evidence_ids": [],
+      "id": "bd3d8db4-1150-4cd8-871f-2406a0e989f4",
+      "rationale": "",
       "verdict": "APPROVE"
     },
     "c53d8fc6-d8ac-4ece-8240-8bab72b19eac": {
@@ -123,15 +170,23 @@
       "kind": "test",
       "source": "local",
       "summary": "26 unittest tests pass (temp git repos)"
+    },
+    "ea319f5a-8a9c-4b56-a9d4-4ee0f8fdc2ca": {
+      "captured_at": "2026-07-25T20:27:15Z",
+      "detail": "",
+      "id": "ea319f5a-8a9c-4b56-a9d4-4ee0f8fdc2ca",
+      "kind": "test",
+      "source": "",
+      "summary": "47 tests pass after approved action"
     }
   },
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-25T19:53:41Z",
+    "captured_at": "2026-07-25T20:27:15Z",
     "detached": false,
-    "dirty": false,
-    "dirty_fingerprint": null,
-    "head_commit": "e3e732112c89218d5462a480b3e37bf9a626618f"
+    "dirty": true,
+    "dirty_fingerprint": "0fbf2b8cfe0f962236eea0b1cfa744275bba44f5a8318f5ef4682aa886a48795",
+    "head_commit": "e8986fe796cd12bd17d5d171cfd04fe45bcda4ba"
   },
   "identity": {
     "created_at": "2026-07-25T18:26:36Z",
@@ -161,9 +216,20 @@
       "id": "98dc8aff-6f86-40f8-8d8a-aa1ed99c77f2",
       "status": "done",
       "updated_at": "2026-07-25T18:26:36Z"
+    },
+    "d15877ab-2e32-49a9-83af-4d741a66fc73": {
+      "created_at": "2026-07-25T20:27:14Z",
+      "decision_ids": [],
+      "description": "Day 3: first end-to-end review acceptance (real ChatGPT APPROVE)",
+      "evidence_ids": [
+        "ea319f5a-8a9c-4b56-a9d4-4ee0f8fdc2ca"
+      ],
+      "id": "d15877ab-2e32-49a9-83af-4d741a66fc73",
+      "status": "done",
+      "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "0363c950-7893-44a5-8922-5c82b3f81972",
+  "last_checkpoint_id": "ab1fae95-5de0-42d5-bb0a-1c20caf5358d",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -180,11 +246,32 @@
     "secrets_or_prod",
     "scope_change"
   ],
+  "reviews": {
+    "84e83faf-8c83-4961-a695-38b8804e0859": {
+      "action": "Add a new file docs/example-review-workflow.md containing a concise, documented example of the completed manual ChatGPT review workflow (request -> upload -> decision -> import -> gate -> action -> checkpoint). Documentation only; no code changes; fully reversible.",
+      "branch": "main",
+      "created_at": "2026-07-25T20:11:39Z",
+      "decision_id": "bd3d8db4-1150-4cd8-871f-2406a0e989f4",
+      "dirty_fingerprint": null,
+      "head_commit": "e8986fe796cd12bd17d5d171cfd04fe45bcda4ba",
+      "imported_at": "2026-07-25T20:26:05Z",
+      "packet_id": "84e83faf-8c83-4961-a695-38b8804e0859",
+      "packet_type": "review_request",
+      "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+      "question": "Should Claude perform the proposed action?",
+      "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+      "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+      "scope_revision": 3,
+      "status": "imported",
+      "verdict": "APPROVE"
+    }
+  },
   "schema_version": "1.0.0",
   "scope": {
-    "description": "Day 2: deterministic CLI + Project Context Resolver",
-    "set_at": "2026-07-25T19:53:41Z",
-    "version": 2
+    "description": "Day 3: first end-to-end manual ChatGPT review happy path",
+    "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
+    "set_at": "2026-07-25T20:11:39Z",
+    "version": 3
   },
-  "updated_at": "2026-07-25T19:53:41Z"
+  "updated_at": "2026-07-25T20:27:15Z"
 }
