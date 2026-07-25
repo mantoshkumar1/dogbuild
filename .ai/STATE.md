@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-25T21:59:52Z
+- **State updated:** 2026-07-25T22:33:27Z
 
 ## Objective
 
@@ -22,9 +22,9 @@ Reviewer policy + full exception handling slice
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `e50fe959b1380a4046502189efd8c18ac5ef88a1`
-- **Worktree:** dirty (fingerprint `ab481fee77c7…`)
-- **Captured:** 2026-07-25T21:59:52Z
+- **HEAD:** `883c1fd877199d87d39509e6e9b1eaa95faa3963`
+- **Worktree:** clean
+- **Captured:** 2026-07-25T22:33:27Z
 
 ## Requested items
 
@@ -136,5 +136,29 @@ Reviewer policy + full exception handling slice
 - Unresolved risks:
   - Codex cross-model execution untested
   - transport still manual
+  - PAYMENT/DISTRIBUTION unvalidated
+
+### 2026-07-25T22:21:44Z — Recovery reconcile: canonical state refreshed to live HEAD 60b5249 (previous Claude window lost); no product code changed
+
+- Implemented:
+  - refreshed canonical git_state to live HEAD 60b5249d
+  - recorded recovery reconciliation checkpoint
+  - excluded untracked case-study PDF via .git/info/exclude (local-only)
+- Next safe action: Phase 2: first visible end-to-end user walkthrough in a disposable repo (install -> init -> genesis -> review gate -> approved README -> checkpoint)
+- Unresolved risks:
+  - PAYMENT/DISTRIBUTION unvalidated
+  - Codex cross-model execution untested
+  - manual reviewer transport still required
+
+### 2026-07-25T22:33:27Z — First visible user run proven end-to-end; review-request CLI crash fixed; canonical state reconciled
+
+- Implemented:
+  - fixed review-request CLI crash (evidence->machine_evidence) + CLI regression test
+  - docs/first-run-walkthrough.md quickstart
+  - reconciled canonical state to HEAD and excluded case-study PDF locally (.git/info/exclude)
+- Next safe action: Commit .ai dogfood state; optionally sync Revenue Opportunity Lab; then choose the next milestone slice
+- Unresolved risks:
+  - real cross-provider reviewer transport still manual
+  - Codex cross-model execution untested
   - PAYMENT/DISTRIBUTION unvalidated
 

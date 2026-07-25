@@ -68,6 +68,37 @@
         "PAYMENT/DISTRIBUTION unvalidated"
       ]
     },
+    "387d14f2-5a55-402f-abe5-3e50456cd30a": {
+      "created_at": "2026-07-25T22:33:27Z",
+      "evidence_ids": [],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T22:33:27Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "883c1fd877199d87d39509e6e9b1eaa95faa3963"
+      },
+      "id": "387d14f2-5a55-402f-abe5-3e50456cd30a",
+      "implemented": [
+        "fixed review-request CLI crash (evidence->machine_evidence) + CLI regression test",
+        "docs/first-run-walkthrough.md quickstart",
+        "reconciled canonical state to HEAD and excluded case-study PDF locally (.git/info/exclude)"
+      ],
+      "next_safe_action": "Commit .ai dogfood state; optionally sync Revenue Opportunity Lab; then choose the next milestone slice",
+      "summary": "First visible user run proven end-to-end; review-request CLI crash fixed; canonical state reconciled",
+      "tested": [
+        "89 unittest tests green",
+        "disposable walkthrough: install(offline venv)->init->genesis->where-am-i->review request->gate PROCEED->approved README->checkpoint",
+        "regression test fails without the fix (verified)"
+      ],
+      "unresolved_risks": [
+        "real cross-provider reviewer transport still manual",
+        "Codex cross-model execution untested",
+        "PAYMENT/DISTRIBUTION unvalidated"
+      ]
+    },
     "73acbf7d-0357-46d9-ae9f-246bf26bcc5d": {
       "created_at": "2026-07-25T21:06:33Z",
       "evidence_ids": [],
@@ -131,6 +162,36 @@
       "unresolved_risks": [
         "PAYMENT + DISTRIBUTION unvalidated (dogfood-first; recorded in revenue-opportunity-lab)",
         "legacy-Markdown importer not built; authority gate is Day 10"
+      ]
+    },
+    "aa55fd0e-3f86-4af4-9648-e084ac07b2d9": {
+      "created_at": "2026-07-25T22:21:44Z",
+      "evidence_ids": [],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T22:21:44Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "60b5249d4023a74283785bf8e0e4e4b62b717bfa"
+      },
+      "id": "aa55fd0e-3f86-4af4-9648-e084ac07b2d9",
+      "implemented": [
+        "refreshed canonical git_state to live HEAD 60b5249d",
+        "recorded recovery reconciliation checkpoint",
+        "excluded untracked case-study PDF via .git/info/exclude (local-only)"
+      ],
+      "next_safe_action": "Phase 2: first visible end-to-end user walkthrough in a disposable repo (install -> init -> genesis -> review gate -> approved README -> checkpoint)",
+      "summary": "Recovery reconcile: canonical state refreshed to live HEAD 60b5249 (previous Claude window lost); no product code changed",
+      "tested": [
+        "88 unittest tests green",
+        "worktree clean after local exclude"
+      ],
+      "unresolved_risks": [
+        "PAYMENT/DISTRIBUTION unvalidated",
+        "Codex cross-model execution untested",
+        "manual reviewer transport still required"
       ]
     },
     "ab1fae95-5de0-42d5-bb0a-1c20caf5358d": {
@@ -396,11 +457,11 @@
   },
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-25T21:59:52Z",
+    "captured_at": "2026-07-25T22:33:27Z",
     "detached": false,
-    "dirty": true,
-    "dirty_fingerprint": "ab481fee77c7eaecfdf35d0ef3fa01caa8dbb0421ebcd3c6587be1d911321f0d",
-    "head_commit": "e50fe959b1380a4046502189efd8c18ac5ef88a1"
+    "dirty": false,
+    "dirty_fingerprint": null,
+    "head_commit": "883c1fd877199d87d39509e6e9b1eaa95faa3963"
   },
   "goal_contract": {
     "acceptance_criteria": [
@@ -533,7 +594,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "044dc774-eff1-467c-b25a-f32169c93955",
+  "last_checkpoint_id": "387d14f2-5a55-402f-abe5-3e50456cd30a",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -847,5 +908,5 @@
     "set_at": "2026-07-25T21:59:04Z",
     "version": 7
   },
-  "updated_at": "2026-07-25T21:59:52Z"
+  "updated_at": "2026-07-25T22:33:27Z"
 }

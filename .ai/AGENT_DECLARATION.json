@@ -1,18 +1,18 @@
 {
   "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "DogBuild Genesis + Goal Lock + parking + brief fix",
-  "changed": "genesis/goal/park/drift-alignment; brief driven by goal contract",
-  "claimed_head": "63211ec5929fcda42fcf16da8dde04df02445ba4",
-  "created_at": "2026-07-25T21:06:33Z",
-  "failed": "None",
+  "building": "DogBuild: first visible end-to-end user run (+ recovery reconcile)",
+  "changed": "Fixed review-request CLI crash (+CLI regression test); added first-run walkthrough doc; reconciled canonical state; proved a disposable end-to-end walkthrough",
+  "claimed_head": "883c1fd877199d87d39509e6e9b1eaa95faa3963",
+  "created_at": "2026-07-25T22:33:27Z",
+  "failed": "None outstanding (found and fixed a review-request CLI crash that blocked the loop)",
   "goal_alignment": {
-    "explanation": "Work matches the approved DogBuild milestone.",
+    "explanation": "Completed the first visible user run of the local loop; no governance features added",
     "goal_contract_revision": 1,
     "status": "IN_SCOPE"
   },
-  "incomplete": "Codex execution; full reviewer policy reserved",
-  "next_action": "Proceed to the versioned reviewer-policy slice",
+  "incomplete": "Real cross-provider reviewer transport still manual; Codex execution untested; PAYMENT/DISTRIBUTION unvalidated",
+  "next_action": "Commit the .ai dogfood state; optionally sync Revenue Opportunity Lab; then choose the next milestone slice",
   "role": "execution_agent",
-  "verified": "69 tests pass"
+  "verified": "89 unittest tests green; disposable walkthrough reached gate PROCEED and created only the approved README; regression test fails without the fix"
 }
