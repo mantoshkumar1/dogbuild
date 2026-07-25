@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://project-state-keeper/schemas/state.schema.json",
+  "title": "Project State Keeper — canonical state",
+  "type": "object",
+  "required": ["schema_version", "identity", "git_state", "reserved_approvals", "updated_at"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "identity": {
+      "type": "object",
+      "required": ["psk_uuid", "root", "created_at"],
+      "properties": {
+        "psk_uuid": {"type": "string", "minLength": 1},
+        "root": {"type": "string"},
+        "remotes": {"type": "array", "items": {"type": "string"}},
+        "created_at": {"type": "string"}
+      }
+    },
+    "git_state": {"$ref": "#/definitions/gitState"},
+    "objective": {
+      "type": ["object", "null"],
+      "required": ["text", "version", "set_at"],
+      "properties": {
+        "text": {"type": "string"},
+        "version": {"type": "integer"},
+        "set_at": {"type": "string"}
+      }
+    },
+    "scope": {
+      "type": ["object", "null"],
+      "required": ["description", "version", "set_at"]
+    },
+    "reserved_approvals": {
+      "type": "array",
+      "items": {"enum": ["push", "deploy", "merge", "publish", "delete_data", "spend", "external_comm", "secrets_or_prod", "scope_change"]}
+    },
+    "items": {"type": "object", "additionalProperties": {"$ref": "#/definitions/item"}},
+    "evidence": {"type": "object", "additionalProperties": {"$ref": "#/definitions/evidence"}},
+    "decisions": {"type": "object", "additionalProperties": {"$ref": "#/definitions/decision"}},
+    "checkpoints": {"type": "object"},
+    "last_checkpoint_id": {"type": ["string", "null"]}
+  },
+  "definitions": {
+    "gitState": {
+      "type": "object",
+      "required": ["branch", "detached", "dirty", "captured_at"],
+      "properties": {
+        "branch": {"type": "string"},
+        "detached": {"type": "boolean"},
+        "head_commit": {"type": ["string", "null"]},
+        "dirty": {"type": "boolean"},
+        "dirty_fingerprint": {"type": ["string", "null"]},
+        "captured_at": {"type": "string"}
+      }
+    },
+    "item": {
+      "type": "object",
+      "required": ["id", "description", "status", "created_at", "updated_at"],
+      "properties": {
+        "status": {"enum": ["requested", "approved", "in_progress", "blocked", "done", "cancelled"]}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["id", "kind", "summary", "captured_at"],
+      "properties": {
+        "kind": {"enum": ["test", "command", "git", "file", "note"]}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["id", "authority", "verdict", "binding", "created_at"],
+      "properties": {
+        "authority": {"enum": ["human", "chatgpt"]},
+        "verdict": {"enum": ["APPROVE", "APPROVE_WITH_CONDITIONS", "VETO", "NEEDS_HUMAN"]}
+      }
+    }
+  }
+}

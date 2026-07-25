@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://project-state-keeper/schemas/event.schema.json",
+  "title": "Project State Keeper — append-only event",
+  "type": "object",
+  "required": ["event_id", "type", "timestamp", "actor", "schema_version"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "type": {"enum": ["initialized", "git_captured", "objective_set", "scope_set", "item_requested", "item_status_changed", "evidence_recorded", "decision_recorded", "checkpoint_created"]},
+    "timestamp": {"type": "string"},
+    "actor": {"type": "string"},
+    "schema_version": {"type": "string"},
+    "payload": {"type": "object"}
+  }
+}

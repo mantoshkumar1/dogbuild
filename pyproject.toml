@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "project-state-keeper"
+version = "0.0.0"
+description = "Local, file-based communication and authority layer between coding agents."
+readme = "README.md"
+requires-python = ">=3.9"
+# Runtime: standard library only (zero third-party runtime dependencies) by design.
+dependencies = []
+
+[project.optional-dependencies]
+# Tests use the stdlib `unittest` runner; no third-party test dependency required.
+dev = []
+
+[project.scripts]
+psk = "psk.__main__:main"
+
+[tool.setuptools]
+packages = ["psk"]
+
+[tool.setuptools.package-data]
+psk = ["schemas/*.json"]
