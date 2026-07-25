@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-25T20:47:15Z
+- **State updated:** 2026-07-25T21:06:33Z
 
 ## Objective
 
@@ -15,16 +15,16 @@ Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state s
 
 ## Active scope
 
-(v4, set 2026-07-25T20:45:53Z)
+(v5, set 2026-07-25T21:06:33Z)
 
-Day 4: Orientation Brief + generic handoff slice
+Complete one short, reliable local control loop using ChatGPT as reviewer and Claude as executor.
 
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `019f519bdc8b2fced7bf2e7197d7b62e028180d1`
-- **Worktree:** dirty (fingerprint `c290a8eaf7c1…`)
-- **Captured:** 2026-07-25T20:47:15Z
+- **HEAD:** `63211ec5929fcda42fcf16da8dde04df02445ba4`
+- **Worktree:** clean
+- **Captured:** 2026-07-25T21:06:33Z
 
 ## Requested items
 
@@ -103,4 +103,17 @@ Day 4: Orientation Brief + generic handoff slice
   - cross-model execution with Codex UNTESTED (Codex unavailable) — Codex handoff generation is tested, execution is not
   - manual transport still required for ChatGPT reviews (automation not built)
   - PAYMENT + DISTRIBUTION unvalidated
+
+### 2026-07-25T21:06:33Z — Project Genesis and Goal Lock
+
+- Implemented:
+  - genesis import + goal contract
+  - idea parking lot
+  - goal-drift alignment
+  - goal-driven Orientation Brief; warnings != human interruption
+- Next safe action: the next agreed implementation slice: versioned reviewer policy (VETO/APPROVE_WITH_CONDITIONS/NEEDS_HUMAN + evidence-based revision loop)
+- Unresolved risks:
+  - Codex execution untested
+  - full reviewer policy reserved
+  - PAYMENT/DISTRIBUTION unvalidated
 

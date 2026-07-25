@@ -1,13 +1,18 @@
 {
   "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "Project State Keeper MVP: Orientation Brief + generic agent handoff (Day 4).",
-  "changed": "Added brief/where-am-i, working-agent declaration, generic handoff (claude/codex), operating mode.",
-  "claimed_head": "019f519bdc8b2fced7bf2e7197d7b62e028180d1",
-  "created_at": "2026-07-25T20:45:53Z",
-  "failed": "None.",
-  "incomplete": "Codex cross-model execution (Codex unavailable); full reviewer-policy + VETO/conditions/needs-human reserved.",
-  "next_action": "Consume the Claude handoff and perform the delegated where-am-i alias test + doc example.",
+  "building": "DogBuild Genesis + Goal Lock + parking + brief fix",
+  "changed": "genesis/goal/park/drift-alignment; brief driven by goal contract",
+  "claimed_head": "63211ec5929fcda42fcf16da8dde04df02445ba4",
+  "created_at": "2026-07-25T21:06:33Z",
+  "failed": "None",
+  "goal_alignment": {
+    "explanation": "Work matches the approved DogBuild milestone.",
+    "goal_contract_revision": 1,
+    "status": "IN_SCOPE"
+  },
+  "incomplete": "Codex execution; full reviewer policy reserved",
+  "next_action": "Proceed to the versioned reviewer-policy slice",
   "role": "execution_agent",
-  "verified": "Full suite: 56 tests pass (unittest)."
+  "verified": "69 tests pass"
 }

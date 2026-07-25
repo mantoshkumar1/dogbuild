@@ -35,6 +35,38 @@
         "ChatGPT Web cannot inspect tabs/repos — manual packet upload only"
       ]
     },
+    "73acbf7d-0357-46d9-ae9f-246bf26bcc5d": {
+      "created_at": "2026-07-25T21:06:33Z",
+      "evidence_ids": [],
+      "failures_resolved": [
+        "brief showed obsolete Day 1 objective and false 'human needed: yes' -> fixed"
+      ],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-25T21:06:33Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "63211ec5929fcda42fcf16da8dde04df02445ba4"
+      },
+      "id": "73acbf7d-0357-46d9-ae9f-246bf26bcc5d",
+      "implemented": [
+        "genesis import + goal contract",
+        "idea parking lot",
+        "goal-drift alignment",
+        "goal-driven Orientation Brief; warnings != human interruption"
+      ],
+      "next_safe_action": "the next agreed implementation slice: versioned reviewer policy (VETO/APPROVE_WITH_CONDITIONS/NEEDS_HUMAN + evidence-based revision loop)",
+      "summary": "Project Genesis and Goal Lock",
+      "tested": [
+        "69 tests"
+      ],
+      "unresolved_risks": [
+        "Codex execution untested",
+        "full reviewer policy reserved",
+        "PAYMENT/DISTRIBUTION unvalidated"
+      ]
+    },
     "8200945d-6ad0-4cec-ba19-e701dac7082d": {
       "created_at": "2026-07-25T18:26:36Z",
       "evidence_ids": [
@@ -224,11 +256,55 @@
   },
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-25T20:47:15Z",
+    "captured_at": "2026-07-25T21:06:33Z",
     "detached": false,
-    "dirty": true,
-    "dirty_fingerprint": "c290a8eaf7c1d97be5bce6f2f24d5937f017a11825977f67da1bc970c008085a",
-    "head_commit": "019f519bdc8b2fced7bf2e7197d7b62e028180d1"
+    "dirty": false,
+    "dirty_fingerprint": null,
+    "head_commit": "63211ec5929fcda42fcf16da8dde04df02445ba4"
+  },
+  "goal_contract": {
+    "acceptance_criteria": [
+      "The human can see where the project is in under 20 seconds.",
+      "A mature discussion can become an approved project contract.",
+      "Claude can continue without receiving the entire ChatGPT conversation.",
+      "Work remains bound to the active objective and milestone.",
+      "Optional ideas are parked rather than implemented.",
+      "The human is interrupted only when a real choice is required."
+    ],
+    "approved_at": "2026-07-25T21:06:33Z",
+    "core_repository": "project-state-keeper",
+    "created_at": "2026-07-25T21:06:33Z",
+    "created_by": "chatgpt",
+    "current_milestone": "Complete one short, reliable local control loop using ChatGPT as reviewer and Claude as executor.",
+    "desired_outcome": "Turn a mature AI discussion into an executable project contract, keep all agents aligned with it, verify repository evidence, and involve the human only for genuine exceptions.",
+    "exact_next_action": "Make the Goal Contract and Orientation Brief reliably reflect the current approved DogBuild purpose.",
+    "explicit_exclusions": [
+      "automatic browser control",
+      "OpenAI API integration",
+      "Anthropic API integration",
+      "dashboards",
+      "forecasting",
+      "marketplace packaging",
+      "payments",
+      "Cursor support",
+      "production deployment"
+    ],
+    "fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
+    "goal_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+    "human_approved": true,
+    "human_only_decisions": [],
+    "problem": "Solo developers lose project purpose, current state, decisions, and context while moving work between ChatGPT, Claude, Codex, and multiple repositories.",
+    "product_name": "DogBuild",
+    "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
+    "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
+    "revision": 1,
+    "target_user": "Solo developers who explore projects in ChatGPT and implement them with Claude Code or Codex.",
+    "unresolved_assumptions": [
+      "external willingness to pay",
+      "final Lite versus Pro boundary",
+      "automatic cross-provider transport"
+    ],
+    "why_now": "The founder experiences this repeatedly while building PhotoSahi and DogBuild itself and currently acts as messenger, historian, and coordinator between AI tools."
   },
   "handoffs": {
     "baa8e579-593d-42f2-b00a-d99a38062c0c": {
@@ -305,12 +381,68 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "e1aa0088-29d9-4695-a1d7-1eee4cbce702",
+  "last_checkpoint_id": "73acbf7d-0357-46d9-ae9f-246bf26bcc5d",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
     "version": 1
   },
+  "parked_ideas": [
+    {
+      "id": "01599636-685c-4c3f-b393-a94930875fb1",
+      "phase": "future",
+      "reason": "listed as out-of-scope in the project genesis",
+      "source_agent": "chatgpt",
+      "status": "parked",
+      "timestamp": "2026-07-25T21:06:33Z",
+      "title": "project forecasting and analytics"
+    },
+    {
+      "id": "d488438f-fdeb-4dbc-8a70-0089a4d41fd6",
+      "phase": "future",
+      "reason": "listed as out-of-scope in the project genesis",
+      "source_agent": "chatgpt",
+      "status": "parked",
+      "timestamp": "2026-07-25T21:06:33Z",
+      "title": "BYOK model-cost optimization"
+    },
+    {
+      "id": "edbd9f90-7fed-4c91-b327-2f0358f3c9d0",
+      "phase": "future",
+      "reason": "listed as out-of-scope in the project genesis",
+      "source_agent": "chatgpt",
+      "status": "parked",
+      "timestamp": "2026-07-25T21:06:33Z",
+      "title": "premium reviewer with cheaper executor"
+    },
+    {
+      "id": "e71411f6-3886-4442-ad5b-2e429553108f",
+      "phase": "future",
+      "reason": "listed as out-of-scope in the project genesis",
+      "source_agent": "chatgpt",
+      "status": "parked",
+      "timestamp": "2026-07-25T21:06:33Z",
+      "title": "automatic ChatGPT transport"
+    },
+    {
+      "id": "6f49ca3e-3677-48db-b303-dbe1e2d09d58",
+      "phase": "later",
+      "reason": "valid but outside the current milestone",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-07-25T21:06:33Z",
+      "title": "Cursor support"
+    },
+    {
+      "id": "8211a6df-b694-41d9-8e3d-c407b717abd6",
+      "phase": "later",
+      "reason": "commercial, not now",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-07-25T21:06:33Z",
+      "title": "Marketplace and payment packaging"
+    }
+  ],
   "reserved_approvals": [
     "push",
     "deploy",
@@ -344,10 +476,11 @@
   },
   "schema_version": "1.0.0",
   "scope": {
-    "description": "Day 4: Orientation Brief + generic handoff slice",
+    "description": "Complete one short, reliable local control loop using ChatGPT as reviewer and Claude as executor.",
+    "goal_revision": 1,
     "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
-    "set_at": "2026-07-25T20:45:53Z",
-    "version": 4
+    "set_at": "2026-07-25T21:06:33Z",
+    "version": 5
   },
-  "updated_at": "2026-07-25T20:47:15Z"
+  "updated_at": "2026-07-25T21:06:33Z"
 }
