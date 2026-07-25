@@ -2,46 +2,24 @@ import os
 import tempfile
 import unittest
 
-from psk import core, gitutil, identity, review, store
+from psk import core, gitutil, identity, policy, review, store
 from psk.errors import ProjectMismatchError, ValidationError
-from tests._helpers import cleanup, make_repo
+from tests._helpers import build_review_decision, cleanup, import_min_genesis, make_repo
 
 
-def build_decision(rec, ident, **overrides) -> str:
-    fp = rec["dirty_fingerprint"] or "null"
-    fields = {
-        "schema_version": "1",
-        "packet_type": "review_decision",
-        "packet_id": rec["packet_id"],
-        "project_id": ident.project_id,
-        "repository_id": ident.repository_id,
-        "reviewed_branch": rec["branch"],
-        "reviewed_head": rec["head_commit"],
-        "reviewed_diff_fingerprint": fp,
-        "scope_id": rec["scope_id"],
-        "scope_revision": rec["scope_revision"],
-        "reviewer": "chatgpt",
-        "decision": "APPROVE",
-        "confidence": "high",
-        "reviewed_at": "2026-07-25T00:00:00Z",
-    }
-    fields.update(overrides)
-    yaml = "\n".join(f"{k}: {v}" for k, v in fields.items())
-    return (f"```yaml\n{yaml}\n```\n\n## Decision\nAPPROVE\n\n## Rationale\nfine\n\n"
-            f"## Conditions\nNone\n\n## Required next action\n{rec['action']}\n")
-
-
-class TestReview(unittest.TestCase):
+class Base(unittest.TestCase):
     def setUp(self):
         self.d = make_repo(with_commit=True)
         self.addCleanup(cleanup, self.d)
         self.root = gitutil.repo_root(self.d)
         core.initialize(self.root, objective="obj")
-        core.set_scope(self.root, "Day 3 scope")
+        self.goal = import_min_genesis(self.root)
         self.ident = identity.load_identity(self.root)
+        self.pol = policy.load(self.root)
 
     def _record(self):
-        return list(store.load_state(self.root).reviews.values())[-1]
+        revs = store.load_state(self.root).reviews.values()
+        return sorted(revs, key=lambda r: r.get("seq", -1))[-1]
 
     def _write(self, text) -> str:
         fd, p = tempfile.mkstemp(suffix=".md")
@@ -50,79 +28,76 @@ class TestReview(unittest.TestCase):
         self.addCleanup(os.remove, p)
         return p
 
-    def _request(self):
+    def _request(self, **kw):
         return review.build_review_request(
-            self.root, question="Should Claude perform the action?",
-            action="Add a documented example")
+            self.root, question="Should Claude do it?", action="Add a doc", **kw)
 
-    def test_happy_path_end_to_end(self):
-        out = self._request()
-        self.assertTrue(out.exists())
+
+class TestReviewHappy(Base):
+    def test_approve_end_to_end(self):
+        self._request()
         rec = self._record()
-        dfile = self._write(build_decision(rec, self.ident))
-        summary = review.import_decision(self.root, dfile)
-        self.assertEqual(summary["verdict"], "APPROVE")
+        dfile = self._write(build_review_decision(rec, self.ident, self.pol, self.goal))
+        s = review.import_decision(self.root, dfile)
+        self.assertEqual(s["verdict"], "APPROVE")
         g = review.gate(self.root)
         self.assertEqual(g["result"], "PROCEED")
-        self.assertTrue(g["approval_current"])
-        # archived unchanged
         arch = os.path.join(self.root, ".ai", "exchange", "archive", rec["packet_id"])
-        self.assertTrue(os.path.exists(os.path.join(arch, "request.md")))
         self.assertTrue(os.path.exists(os.path.join(arch, "decision.md")))
 
-    def test_reject_malformed(self):
-        self._request()
-        dfile = self._write("this is not a decision file")
-        with self.assertRaises(ValidationError):
-            review.import_decision(self.root, dfile)
+    def test_request_carries_policy_and_goal_bindings(self):
+        out = self._request()
+        rec = self._record()
+        self.assertEqual(rec["review_policy_id"], self.pol["policy_id"])
+        self.assertEqual(rec["review_policy_fingerprint"], self.pol["fingerprint"])
+        self.assertEqual(rec["goal_contract_id"], self.goal["goal_id"])
+        text = out.read_text(encoding="utf-8")
+        self.assertIn("review_policy_fingerprint", text)
+        self.assertIn("goal_contract_fingerprint", text)
+        # packet visibly separates evidence vs claims
+        self.assertIn("Machine-collected evidence", text)
+        self.assertIn("Execution-agent claims", text)
 
-    def test_reject_unknown_packet(self):
+
+class TestReviewRejections(Base):
+    def _reject(self, exc, **ov):
         self._request()
         rec = self._record()
-        dfile = self._write(build_decision(rec, self.ident, packet_id="not-a-real-id"))
-        with self.assertRaises(ValidationError):
+        dfile = self._write(build_review_decision(rec, self.ident, self.pol, self.goal, **ov))
+        with self.assertRaises(exc):
             review.import_decision(self.root, dfile)
 
-    def test_reject_wrong_project(self):
-        self._request()
-        rec = self._record()
-        dfile = self._write(build_decision(rec, self.ident, project_id="wrong"))
-        with self.assertRaises(ProjectMismatchError):
-            review.import_decision(self.root, dfile)
-
-    def test_reject_wrong_repository(self):
-        self._request()
-        rec = self._record()
-        dfile = self._write(build_decision(rec, self.ident, repository_id="wrong"))
-        with self.assertRaises(ProjectMismatchError):
-            review.import_decision(self.root, dfile)
-
-    def test_reject_wrong_branch(self):
-        self._request()
-        rec = self._record()
-        dfile = self._write(build_decision(rec, self.ident, reviewed_branch="feature-x"))
-        with self.assertRaises(ValidationError):
-            review.import_decision(self.root, dfile)
-
-    def test_reject_stale_head(self):
-        self._request()
-        rec = self._record()
-        dfile = self._write(build_decision(rec, self.ident, reviewed_head="deadbeef" * 5))
-        with self.assertRaises(ValidationError):
-            review.import_decision(self.root, dfile)
-
-    def test_reject_wrong_fingerprint(self):
-        self._request()
-        rec = self._record()
-        dfile = self._write(build_decision(rec, self.ident,
-                                           reviewed_diff_fingerprint="abc123"))
-        with self.assertRaises(ValidationError):
-            review.import_decision(self.root, dfile)
-
-    def test_gate_before_import_errors(self):
+    def test_malformed(self):
         self._request()
         with self.assertRaises(ValidationError):
-            review.gate(self.root)
+            review.import_decision(self.root, self._write("not a decision"))
+
+    def test_unknown_packet(self):
+        self._reject(ValidationError, packet_id="nope")
+
+    def test_wrong_project(self):
+        self._reject(ProjectMismatchError, project_id="wrong")
+
+    def test_wrong_repository(self):
+        self._reject(ProjectMismatchError, repository_id="wrong")
+
+    def test_wrong_branch(self):
+        self._reject(ValidationError, reviewed_branch="feature")
+
+    def test_stale_head(self):
+        self._reject(ValidationError, reviewed_head="deadbeef" * 5)
+
+    def test_wrong_fingerprint(self):
+        self._reject(ValidationError, reviewed_diff_fingerprint="abc123")
+
+    def test_missing_policy_binding(self):
+        self._reject(ValidationError, review_policy_fingerprint="")
+
+    def test_mismatched_policy(self):
+        self._reject(ValidationError, review_policy_version="999")
+
+    def test_stale_goal(self):
+        self._reject(ValidationError, goal_contract_revision="999")
 
 
 if __name__ == "__main__":

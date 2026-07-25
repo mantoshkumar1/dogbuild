@@ -82,6 +82,8 @@ class EventType(str, enum.Enum):
     GENESIS_IMPORTED = "genesis_imported"
     GOAL_SET = "goal_set"
     IDEA_PARKED = "idea_parked"
+    REVIEW_REVISED = "review_revised"
+    HUMAN_DECISION_RECORDED = "human_decision_recorded"
 
 
 # Reserved human-only approvals — always require the human, never auto-performed.
@@ -202,6 +204,8 @@ class ProjectState:
     # The active, human-approved Goal Contract (plain dict) and parked ideas.
     goal_contract: Optional[dict] = None
     parked_ideas: List[dict] = field(default_factory=list)
+    # Recorded human decisions keyed by id (plain dicts).
+    human_decisions: Dict[str, dict] = field(default_factory=dict)
     last_checkpoint_id: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -333,5 +337,6 @@ def _state_from_dict(d: dict) -> ProjectState:
         handoffs={k: dict(v) for k, v in d.get("handoffs", {}).items()},
         goal_contract=(dict(d["goal_contract"]) if d.get("goal_contract") else None),
         parked_ideas=[dict(x) for x in d.get("parked_ideas", [])],
+        human_decisions={k: dict(v) for k, v in d.get("human_decisions", {}).items()},
         last_checkpoint_id=d.get("last_checkpoint_id"),
     )

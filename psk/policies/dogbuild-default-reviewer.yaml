@@ -1,0 +1,29 @@
+schema_version: 1
+policy_id: dogbuild-default-reviewer
+policy_version: 1
+reviewer_role: delegated_strategy_authority
+
+priorities:
+  - explicit_human_instruction
+  - active_goal_contract
+  - verified_repository_evidence
+  - current_milestone
+  - acceptance_criteria
+  - founder_knowledge_contract
+  - reversibility
+  - minimal_scope
+  - unresolved_risk
+
+allowed_decisions:
+  - APPROVE
+  - APPROVE_WITH_CONDITIONS
+  - VETO
+  - NEEDS_HUMAN
+
+behavior:
+  judge_evidence_not_tone: true
+  do_not_expand_scope: true
+  park_optional_ideas: true
+  do_not_reopen_settled_decisions_without_new_evidence: true
+  distinguish_warning_from_blocker: true
+  require_human_for_irreversible_actions: true

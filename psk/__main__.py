@@ -13,8 +13,8 @@ import sys
 
 from . import (__version__, agentmode, brief as brief_mod, context, core,
                declaration, genesis as genesis_mod, gitutil, goal as goal_mod,
-               handoff as handoff_mod, identity as identity_mod, park as park_mod,
-               registry, review, store)
+               handoff as handoff_mod, human as human_mod, identity as identity_mod,
+               park as park_mod, policy as policy_mod, registry, review, store)
 from .errors import (
     AmbiguousContextError,
     IncompatibleStateError,
@@ -146,10 +146,9 @@ def _cmd_review_request(args) -> int:
 
 
 def _cmd_review_import(args) -> int:
-    summary = review.import_decision(args.path, args.decision_file)
-    _emit(f"Imported {summary['verdict']} for action: {summary['action']} "
-          f"(packet {summary['packet_id']}; archived to {summary['archived_to']})",
-          summary, args.json)
+    s = review.import_decision(args.path, args.decision_file)
+    _emit(f"Imported {s['verdict']} (packet {s['packet_id']}); "
+          f"conditions: {s['conditions'] or 'None'}", s, args.json)
     return SUCCESS
 
 
@@ -157,16 +156,62 @@ def _cmd_review_gate(args) -> int:
     g = review.gate(args.path, packet_id=args.packet)
     human = (
         f"Result: {g['result']}\n"
-        f"Decision: {g['decision']} by {g['reviewer']}\n"
+        f"Verdict: {g['verdict']}\n"
         f"Approved action: {g['approved_action']}\n"
         f"Packet: {g['packet_id']}\n"
-        f"Project: {g['project']}\n"
-        f"Branch/HEAD: {g['branch']} @ {g['head']}\n"
-        f"Scope: {g['scope']}\n"
-        f"Approval current: {g['approval_current']}\n"
+        f"Conditions: {g['conditions'] or 'None'}\n"
+        f"Approval current: {g['approval_current']} | policy current: {g['policy_current']}\n"
         f"{g['note']}\n"
     )
     _emit(human, g, args.json)
+    return SUCCESS
+
+
+def _cmd_review_revise(args) -> int:
+    out = review.revise(args.path, args.packet, args.evidence)
+    _emit(f"Created ONE revised request after VETO: {out}", {"packet": str(out)}, args.json)
+    return SUCCESS
+
+
+def _cmd_policy_show(args) -> int:
+    _emit_json_or(policy_mod.show(args.path), args.json,
+                  lambda p: f"{p['policy_id']} v{p['policy_version']} "
+                            f"(fingerprint {p['fingerprint'][:12]})")
+    return SUCCESS
+
+
+def _cmd_policy_verify(args) -> int:
+    v = policy_mod.verify(args.path)
+    human = f"policy verify: {'OK' if v['ok'] else 'FAILED'} " \
+            f"({v['policy_id']} v{v['policy_version']})\n" + \
+            "".join(f"  {k}: {val}\n" for k, val in v["checks"].items())
+    _emit(human, v, args.json)
+    return SUCCESS
+
+
+def _cmd_human_show(args) -> int:
+    b = human_mod.show(args.path)
+    human = (f"Why you are needed: {b['why_needed']}\n"
+             f"Decision required:  {b['decision_required']}\n"
+             f"Options:            {b['options']}\n"
+             f"Recommendation:     {b['recommendation']}\n"
+             f"Paused step:        {b['paused_step']}\n"
+             f"Project:            {b['project']}  HEAD: {b['current_head']}  "
+             f"goal rev: {b['goal_contract_revision']}\n")
+    _emit(human, b, args.json)
+    return SUCCESS
+
+
+def _cmd_human_decide(args) -> int:
+    rec = human_mod.decide(args.path, args.decision_file)
+    _emit(f"Recorded human decision: {rec['choice']} (scope_changed={rec['scope_changed']})",
+          rec, args.json)
+    return SUCCESS
+
+
+def _cmd_resume_verify(args) -> int:
+    r = human_mod.resume_verify(args.path, decision_id=args.decision)
+    _emit(f"resume verify: {r['result']} (choice: {r['choice']})", r, args.json)
     return SUCCESS
 
 
@@ -361,11 +406,18 @@ def _build_parser() -> argparse.ArgumentParser:
     rim.add_argument("--json", action="store_true")
     rim.set_defaults(func=_cmd_review_import)
 
-    rg = rsub.add_parser("gate", help="evaluate the imported decision (APPROVE->PROCEED)")
+    rg = rsub.add_parser("gate", help="evaluate the imported decision (full outcomes)")
     rg.add_argument("path", nargs="?", default=".")
     rg.add_argument("--packet", default=None)
     rg.add_argument("--json", action="store_true")
     rg.set_defaults(func=_cmd_review_gate)
+
+    rrv = rsub.add_parser("revise", help="one new-evidence revision after a VETO")
+    rrv.add_argument("packet")
+    rrv.add_argument("path", nargs="?", default=".")
+    rrv.add_argument("--evidence", required=True)
+    rrv.add_argument("--json", action="store_true")
+    rrv.set_defaults(func=_cmd_review_revise)
 
     # Orientation Brief (brief == where-am-i)
     for name in ("brief", "where-am-i"):
@@ -456,6 +508,40 @@ def _build_parser() -> argparse.ArgumentParser:
     pl.add_argument("path", nargs="?", default=".")
     pl.add_argument("--json", action="store_true")
     pl.set_defaults(func=_cmd_park_list)
+
+    # policy: versioned reviewer policy
+    ppol = sub.add_parser("policy", help="reviewer policy show/verify")
+    polsub = ppol.add_subparsers(dest="policy_cmd", required=True)
+    pols = polsub.add_parser("show", help="show the reviewer policy + fingerprint")
+    pols.add_argument("path", nargs="?", default=".")
+    pols.add_argument("--json", action="store_true")
+    pols.set_defaults(func=_cmd_policy_show)
+    polv = polsub.add_parser("verify", help="verify the reviewer policy")
+    polv.add_argument("path", nargs="?", default=".")
+    polv.add_argument("--json", action="store_true")
+    polv.set_defaults(func=_cmd_policy_verify)
+
+    # human: focused human-decision workflow
+    phu = sub.add_parser("human", help="focused human-decision workflow")
+    husub = phu.add_subparsers(dest="human_cmd", required=True)
+    hush = husub.add_parser("show", help="show the current human-decision brief")
+    hush.add_argument("path", nargs="?", default=".")
+    hush.add_argument("--json", action="store_true")
+    hush.set_defaults(func=_cmd_human_show)
+    hud = husub.add_parser("decide", help="record a human decision from a file")
+    hud.add_argument("decision_file")
+    hud.add_argument("path", nargs="?", default=".")
+    hud.add_argument("--json", action="store_true")
+    hud.set_defaults(func=_cmd_human_decide)
+
+    # resume: safe resume verification
+    prs = sub.add_parser("resume", help="safe resume verification")
+    rssub = prs.add_subparsers(dest="resume_cmd", required=True)
+    rsv = rssub.add_parser("verify", help="verify a recorded human decision is still current")
+    rsv.add_argument("path", nargs="?", default=".")
+    rsv.add_argument("--decision", default=None)
+    rsv.add_argument("--json", action="store_true")
+    rsv.set_defaults(func=_cmd_resume_verify)
 
     return p
 
