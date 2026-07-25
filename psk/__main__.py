@@ -11,7 +11,8 @@ import argparse
 import json
 import sys
 
-from . import __version__, context, core, gitutil, identity as identity_mod, registry, store
+from . import (__version__, context, core, gitutil, identity as identity_mod,
+               registry, review, store)
 from .errors import (
     AmbiguousContextError,
     IncompatibleStateError,
@@ -130,6 +131,43 @@ def _cmd_ctx_export(args) -> int:
     return SUCCESS
 
 
+def _cmd_review_request(args) -> int:
+    out = review.build_review_request(
+        args.path, question=args.question, action=args.action,
+        recommendation=args.recommendation or "", against=args.against or "",
+        evidence=args.evidence or "", uncertainty=args.uncertainty or "",
+    )
+    _emit(f"Wrote review request packet: {out}\nUpload it to ChatGPT with: "
+          f"\"Review the attached Project State Keeper packet.\"",
+          {"packet": str(out)}, args.json)
+    return SUCCESS
+
+
+def _cmd_review_import(args) -> int:
+    summary = review.import_decision(args.path, args.decision_file)
+    _emit(f"Imported {summary['verdict']} for action: {summary['action']} "
+          f"(packet {summary['packet_id']}; archived to {summary['archived_to']})",
+          summary, args.json)
+    return SUCCESS
+
+
+def _cmd_review_gate(args) -> int:
+    g = review.gate(args.path, packet_id=args.packet)
+    human = (
+        f"Result: {g['result']}\n"
+        f"Decision: {g['decision']} by {g['reviewer']}\n"
+        f"Approved action: {g['approved_action']}\n"
+        f"Packet: {g['packet_id']}\n"
+        f"Project: {g['project']}\n"
+        f"Branch/HEAD: {g['branch']} @ {g['head']}\n"
+        f"Scope: {g['scope']}\n"
+        f"Approval current: {g['approval_current']}\n"
+        f"{g['note']}\n"
+    )
+    _emit(human, g, args.json)
+    return SUCCESS
+
+
 def _cmd_reserved(args) -> int:
     print(f"'{args._reserved}' is reserved for a later day (import/selection "
           f"logic). Not implemented in this MVP build.", file=sys.stderr)
@@ -198,6 +236,33 @@ def _build_parser() -> argparse.ArgumentParser:
         rp = csub.add_parser(name, help="(reserved for a later day)")
         rp.add_argument("rest", nargs="*")
         rp.set_defaults(func=_cmd_reserved, _reserved=name)
+
+    # review: one APPROVE round-trip (request -> import -> gate)
+    pr = sub.add_parser("review", help="ChatGPT review round-trip (Day 3 slice)")
+    rsub = pr.add_subparsers(dest="review_cmd", required=True)
+
+    rr = rsub.add_parser("request", help="generate a ChatGPT review packet")
+    rr.add_argument("path", nargs="?", default=".")
+    rr.add_argument("--question", required=True)
+    rr.add_argument("--action", required=True)
+    rr.add_argument("--recommendation", default=None)
+    rr.add_argument("--against", default=None)
+    rr.add_argument("--evidence", default=None)
+    rr.add_argument("--uncertainty", default=None)
+    rr.add_argument("--json", action="store_true")
+    rr.set_defaults(func=_cmd_review_request)
+
+    rim = rsub.add_parser("import", help="import + validate a ChatGPT decision file")
+    rim.add_argument("decision_file")
+    rim.add_argument("path", nargs="?", default=".")
+    rim.add_argument("--json", action="store_true")
+    rim.set_defaults(func=_cmd_review_import)
+
+    rg = rsub.add_parser("gate", help="evaluate the imported decision (APPROVE->PROCEED)")
+    rg.add_argument("path", nargs="?", default=".")
+    rg.add_argument("--packet", default=None)
+    rg.add_argument("--json", action="store_true")
+    rg.set_defaults(func=_cmd_review_gate)
 
     return p
 

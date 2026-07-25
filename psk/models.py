@@ -73,6 +73,8 @@ class EventType(str, enum.Enum):
     EVIDENCE_RECORDED = "evidence_recorded"
     DECISION_RECORDED = "decision_recorded"
     CHECKPOINT_CREATED = "checkpoint_created"
+    REVIEW_REQUESTED = "review_requested"
+    REVIEW_IMPORTED = "review_imported"
 
 
 # Reserved human-only approvals — always require the human, never auto-performed.
@@ -112,6 +114,7 @@ class Scope:
     description: str
     version: int
     set_at: str
+    scope_id: str = ""  # stable across revisions; version is the revision number
 
 
 @dataclass
@@ -184,6 +187,8 @@ class ProjectState:
     evidence: Dict[str, Evidence] = field(default_factory=dict)
     decisions: Dict[str, Decision] = field(default_factory=dict)
     checkpoints: Dict[str, Checkpoint] = field(default_factory=dict)
+    # Review requests keyed by packet_id (plain dicts — the review slice's records).
+    reviews: Dict[str, dict] = field(default_factory=dict)
     last_checkpoint_id: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -311,5 +316,6 @@ def _state_from_dict(d: dict) -> ProjectState:
         evidence={k: _evidence_from(v) for k, v in d.get("evidence", {}).items()},
         decisions={k: _decision_from(v) for k, v in d.get("decisions", {}).items()},
         checkpoints={k: _checkpoint_from(v) for k, v in d.get("checkpoints", {}).items()},
+        reviews={k: dict(v) for k, v in d.get("reviews", {}).items()},
         last_checkpoint_id=d.get("last_checkpoint_id"),
     )

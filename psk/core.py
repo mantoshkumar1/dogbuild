@@ -119,10 +119,17 @@ def set_objective(path: str, text: str, actor: str = "human") -> ProjectState:
 
 def set_scope(path: str, description: str, actor: str = "human") -> ProjectState:
     root, state = _load(path)
-    version = (state.scope.version + 1) if state.scope else 1
-    state.scope = Scope(description=description, version=version, set_at=now_iso())
+    if state.scope and state.scope.scope_id:
+        scope_id = state.scope.scope_id
+        version = state.scope.version + 1
+    else:
+        scope_id = new_uuid()
+        version = (state.scope.version + 1) if state.scope else 1
+    state.scope = Scope(description=description, version=version, set_at=now_iso(),
+                        scope_id=scope_id)
     return _commit(root, state, _event(EventType.SCOPE_SET, actor,
-                                       version=version, description=description))
+                                       scope_id=scope_id, version=version,
+                                       description=description))
 
 
 def request_item(path: str, description: str, actor: str = "human") -> RequestedItem:
