@@ -137,7 +137,7 @@ def _cmd_review_request(args) -> int:
     out = review.build_review_request(
         args.path, question=args.question, action=args.action,
         recommendation=args.recommendation or "", against=args.against or "",
-        evidence=args.evidence or "", uncertainty=args.uncertainty or "",
+        machine_evidence=args.evidence or "", uncertainty=args.uncertainty or "",
     )
     _emit(f"Wrote review request packet: {out}\nUpload it to ChatGPT with: "
           f"\"Review the attached Project State Keeper packet.\"",

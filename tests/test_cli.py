@@ -81,5 +81,25 @@ class TestCLI(unittest.TestCase):
         self.assertTrue(os.path.exists(json.loads(out)["packet"]))
 
 
+    def test_review_request_via_cli_regression(self):
+        # Regression: `review request` previously crashed unconditionally because
+        # the CLI forwarded evidence= to build_review_request(), which only accepts
+        # machine_evidence=. It must succeed and write a packet file.
+        from tests._helpers import MIN_GENESIS
+        run(["init", self.root])
+        gp = os.path.join(self.root, "genesis.md")
+        with open(gp, "w", encoding="utf-8") as fh:
+            fh.write(MIN_GENESIS)
+        code, _ = run(["genesis", "import", gp, self.root])
+        self.assertEqual(code, exit_codes.SUCCESS)
+        code, out = run(["review", "request", self.root,
+                         "--question", "May I add a one-line README?",
+                         "--action", "Create a README with one sentence.",
+                         "--evidence", "tests pass; scope set",
+                         "--json"])
+        self.assertEqual(code, exit_codes.SUCCESS)
+        self.assertTrue(os.path.exists(json.loads(out)["packet"]))
+
+
 if __name__ == "__main__":
     unittest.main()
