@@ -1,0 +1,63 @@
+# PRODUCT
+
+## Problem
+When Claude, Cursor, Codex, and ChatGPT work on the same project, they don't
+share memory. The human ends up as the manual message bus — copying context,
+re-explaining the project, telling one agent what another said, reconstructing
+history, and deciding routine matters over and over. Decisions get lost, work
+gets duplicated, stale approvals get acted on, and agents silently override each
+other.
+
+## What it is
+A local, file-based tool that maintains **one canonical, verified project state**
+and a **deterministic authority gate**. Agents communicate through structured,
+inspectable packets — not hidden conversations. ChatGPT is the delegated reviewer
+for routine, reversible, in-scope decisions; the human is the ultimate authority
+and is interrupted only on real exceptions.
+
+## Framing (recorded, honest)
+**Founder-tool-first (dogfood).** Built because the founder has a genuine
+recurring problem and will use it daily. It is a **time-boxed commercial
+experiment, not an indefinite personal automation project.**
+
+The path:
+1. Solve my own cross-agent coordination problem.
+2. Prove it across real projects.
+3. Package the working system as a sellable skill / CLI.
+4. Test whether unrelated users will pay.
+5. **Park it if the commercial evidence is weak.**
+
+Dogfood usefulness is **not** demand. Payment, external demand, pricing, and
+distribution stay unvalidated until step 4 — see
+[`docs/commercial-assumptions.md`](docs/commercial-assumptions.md).
+
+## Positioning lines (for later, not commitments)
+- *Your coding agents communicate with each other. You step in only when they disagree.*
+- *Give one AI authority. Let the others execute. Get interrupted only when the decision genuinely needs you.*
+
+## Lite vs Pro boundary
+The MVP builds **Lite only.** Pro is a marker for a *possible* later paid tier —
+not built now, and not evidence of demand.
+
+**Lite (the MVP; free / open, the dogfood):**
+- canonical project-state schema + local CLI;
+- state init & checkpointing;
+- evidence-backed status reconstruction (git + state file);
+- agent handoff generation;
+- ChatGPT Web review-request (packet) generation via manual file exchange;
+- structured review-decision import;
+- stale-decision + repository-identity/branch/commit validation;
+- deterministic authority gate (APPROVE / APPROVE_WITH_CONDITIONS / VETO / NEEDS_HUMAN);
+- thin Claude / Cursor / Codex adapters over one canonical protocol;
+- single repository, single user, local machine.
+
+**Pro (LATER — hypothesis only, explicitly out of MVP):**
+- automated ChatGPT via the OpenAI API (removes manual file exchange);
+- multi-repo / workspace orchestration;
+- shared/team state;
+- richer conflict reports and analytics;
+- hosted sync / dashboard;
+- additional adapters, templates, priority support.
+
+If the commercial test (step 4) is weak, Pro is not built and the tool is parked
+as a personal utility.
