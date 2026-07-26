@@ -18,6 +18,15 @@ from . import (__version__, agentmode, autonomy as autonomy_mod, brief as brief_
                install as install_mod, launcher as launcher_mod, park as park_mod,
                policy as policy_mod,
                registry, review, store)
+from .governor import (
+    audit as gov_audit,
+    brief as gov_brief,
+    classifier as gov_classifier,
+    decision as gov_decision,
+    parser as gov_parser,
+    policy as gov_policy,
+    seeds as gov_seeds,
+)
 from .errors import (
     AmbiguousContextError,
     IncompatibleStateError,
@@ -445,6 +454,83 @@ def _cmd_continuation_show(args) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# governor commands
+# --------------------------------------------------------------------------- #
+def _cmd_governor_policy_show(args) -> int:
+    root = gitutil.repo_root(args.path)
+    pol = gov_policy.load_policy(root)
+    if pol is None:
+        _emit("No active execution policy.", {"active": False}, args.json)
+        return SUCCESS
+    if args.json:
+        print(json.dumps(pol.to_dict(), indent=2, sort_keys=True))
+    else:
+        brief = gov_brief.render_agent_brief(pol)
+        print(brief)
+    return SUCCESS
+
+
+def _cmd_governor_policy_seed(args) -> int:
+    root = gitutil.repo_root(args.path)
+    pol = gov_seeds.photosahi_research_policy(
+        repository_root=root,
+        scratch_dir=args.scratch_dir or f"/private/tmp/dogbuild/{args.project or 'scratch'}",
+    )
+    gov_policy.save_policy(root, pol)
+    _emit(f"Seeded execution policy for task '{pol.scope.task_id}' "
+          f"(project {pol.scope.project_id})",
+          pol.to_dict(), args.json)
+    return SUCCESS
+
+
+def _cmd_governor_decide(args) -> int:
+    root = gitutil.repo_root(args.path)
+    pol = gov_policy.load_policy(root)
+    if pol is None:
+        print("error: no active execution policy — run `statekeeper governor policy seed` first",
+              file=sys.stderr)
+        return NOT_INITIALIZED
+    d = gov_decision.decide(args.command, pol, scratch_dir=args.scratch_dir)
+    _emit(f"Decision: {d.decision} (classification: {d.classification})\n"
+          f"Reasons: {'; '.join(d.reasons)}",
+          d.to_dict(), args.json)
+    return SUCCESS
+
+
+def _cmd_governor_audit(args) -> int:
+    root = gitutil.repo_root(args.path)
+    records = gov_audit.read_audit(root)
+    if not records:
+        _emit("No audit records.", [], args.json)
+        return SUCCESS
+    if args.json:
+        print(json.dumps(records, indent=2, sort_keys=True))
+    else:
+        for rec in records[-20:]:  # show last 20
+            print(f"[{rec['timestamp']}] {rec['decision']:18s} "
+                  f"{rec['classification']:20s} {rec['normalized_command'][:60]}")
+    return SUCCESS
+
+
+def _cmd_governor_brief(args) -> int:
+    root = gitutil.repo_root(args.path)
+    pol = gov_policy.load_policy(root)
+    if pol is None:
+        print("error: no active execution policy", file=sys.stderr)
+        return NOT_INITIALIZED
+    brief = gov_brief.render_agent_brief(pol)
+    _emit(brief, {"brief": brief}, args.json)
+    return SUCCESS
+
+
+def _cmd_governor_clear(args) -> int:
+    root = gitutil.repo_root(args.path)
+    gov_policy.clear_policy(root)
+    _emit("Execution policy cleared.", {"cleared": True}, args.json)
+    return SUCCESS
+
+
+# --------------------------------------------------------------------------- #
 # parser
 # --------------------------------------------------------------------------- #
 def _build_parser() -> argparse.ArgumentParser:
@@ -717,6 +803,50 @@ def _build_parser() -> argparse.ArgumentParser:
     cos = cosub.add_parser("show", help="show the continuation packet")
     cos.add_argument("path", nargs="?", default="."); cos.add_argument("--json", action="store_true")
     cos.set_defaults(func=_cmd_continuation_show)
+
+    # governor: task-scoped execution governor
+    pgov = sub.add_parser("governor", help="task-scoped execution governor")
+    govsub = pgov.add_subparsers(dest="governor_cmd", required=True)
+
+    # governor policy show
+    gps = govsub.add_parser("policy", help="show or manage the active execution policy")
+    gpsub = gps.add_subparsers(dest="gov_policy_cmd", required=True)
+    gpsh = gpsub.add_parser("show", help="show the active execution policy")
+    gpsh.add_argument("path", nargs="?", default=".")
+    gpsh.add_argument("--json", action="store_true")
+    gpsh.set_defaults(func=_cmd_governor_policy_show)
+
+    gpsd = gpsub.add_parser("seed", help="seed a demonstration execution policy")
+    gpsd.add_argument("path", nargs="?", default=".")
+    gpsd.add_argument("--project", default=None, help="project id for the seed policy")
+    gpsd.add_argument("--scratch-dir", default=None, help="approved scratch directory")
+    gpsd.add_argument("--json", action="store_true")
+    gpsd.set_defaults(func=_cmd_governor_policy_seed)
+
+    gpcl = gpsub.add_parser("clear", help="clear the active execution policy")
+    gpcl.add_argument("path", nargs="?", default=".")
+    gpcl.add_argument("--json", action="store_true")
+    gpcl.set_defaults(func=_cmd_governor_clear)
+
+    # governor decide
+    gd = govsub.add_parser("decide", help="get an execution decision for a command")
+    gd.add_argument("command", help="the shell command to evaluate")
+    gd.add_argument("path", nargs="?", default=".")
+    gd.add_argument("--scratch-dir", default=None)
+    gd.add_argument("--json", action="store_true")
+    gd.set_defaults(func=_cmd_governor_decide)
+
+    # governor audit
+    ga = govsub.add_parser("audit", help="show the execution audit trail")
+    ga.add_argument("path", nargs="?", default=".")
+    ga.add_argument("--json", action="store_true")
+    ga.set_defaults(func=_cmd_governor_audit)
+
+    # governor brief
+    gb = govsub.add_parser("brief", help="show the agent-facing policy brief")
+    gb.add_argument("path", nargs="?", default=".")
+    gb.add_argument("--json", action="store_true")
+    gb.set_defaults(func=_cmd_governor_brief)
 
     return p
 
