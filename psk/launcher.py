@@ -32,6 +32,14 @@ DEFAULT_PERMISSION_MODE = "acceptEdits"
 # Hook configuration for Claude Code PreToolUse
 # ------------------------------------------------------------------ #
 
+# Matcher for DogBuild's own PreToolUse group — every tool call is governed.
+DOGBUILD_HOOK_MATCHER = "*"
+
+# Substring that identifies a command hook as DogBuild's, so repeated
+# `dogbuild start` runs replace it instead of appending a duplicate.
+DOGBUILD_HOOK_MARKER = "psk.governor.broker"
+
+
 def _find_psk_root() -> str:
     """Find the root of the psk package (parent of psk/)."""
     return str(Path(__file__).resolve().parent.parent)
@@ -47,50 +55,134 @@ def build_hook_command() -> str:
     return f"PYTHONPATH={psk_root} python3 -m psk.governor.broker"
 
 
+def build_hook_entry() -> Dict[str, str]:
+    """Build the single command-hook object DogBuild installs."""
+    return {"type": "command", "command": build_hook_command()}
+
+
 def build_hooks_config() -> Dict[str, Any]:
-    """Build the hooks section for .claude/settings.local.json."""
+    """Build the hooks section for .claude/settings.local.json.
+
+    Claude Code requires PreToolUse to be a list of *matcher groups*, each
+    with a `matcher` string and a nested `hooks` array of command hooks.
+    A flat list of command hooks is rejected with a Settings Error.
+    """
     return {
         "hooks": {
             "PreToolUse": [
                 {
-                    "type": "command",
-                    "command": build_hook_command(),
+                    "matcher": DOGBUILD_HOOK_MATCHER,
+                    "hooks": [build_hook_entry()],
                 }
             ]
         }
     }
 
 
+def _is_dogbuild_hook(hook: Any) -> bool:
+    """True if *hook* is a command hook owned by DogBuild."""
+    return (
+        isinstance(hook, dict)
+        and isinstance(hook.get("command"), str)
+        and DOGBUILD_HOOK_MARKER in hook["command"]
+    )
+
+
+def _strip_dogbuild_hooks(pre_tool_use: Any) -> List[Any]:
+    """Return *pre_tool_use* with every DogBuild-owned hook removed.
+
+    Unrelated entries — matcher groups and their hooks — are preserved
+    verbatim, including any shapes DogBuild does not understand. Legacy
+    flat DogBuild entries (written by older, broken launcher versions)
+    are dropped so they can be replaced with a valid matcher group.
+    """
+    if not isinstance(pre_tool_use, list):
+        return []
+
+    cleaned: List[Any] = []
+    for entry in pre_tool_use:
+        # Legacy malformed shape: a bare DogBuild command hook at group level.
+        if _is_dogbuild_hook(entry) and not isinstance(entry.get("hooks"), list):
+            continue
+
+        if isinstance(entry, dict) and isinstance(entry.get("hooks"), list):
+            inner = [h for h in entry["hooks"] if not _is_dogbuild_hook(h)]
+            if len(inner) == len(entry["hooks"]):
+                cleaned.append(entry)          # untouched — no DogBuild hook
+            elif inner:
+                cleaned.append({**entry, "hooks": inner})
+            # else: group held only DogBuild's hook — drop the empty group
+            continue
+
+        cleaned.append(entry)
+
+    return cleaned
+
+
+def merge_hooks_config(existing: Any) -> Dict[str, Any]:
+    """Merge DogBuild's PreToolUse hook into *existing* Claude settings.
+
+    Unrelated top-level settings, unrelated hook events, and unrelated
+    PreToolUse matcher groups are preserved. DogBuild's own hook is
+    replaced rather than appended, so repeated calls are idempotent.
+    """
+    settings: Dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
+
+    hooks = settings.get("hooks")
+    hooks = dict(hooks) if isinstance(hooks, dict) else {}
+
+    pre_tool_use = _strip_dogbuild_hooks(hooks.get("PreToolUse"))
+
+    # Reuse an existing group with our matcher when there is one, so we do
+    # not emit two groups for the same matcher.
+    for index, entry in enumerate(pre_tool_use):
+        if (
+            isinstance(entry, dict)
+            and entry.get("matcher") == DOGBUILD_HOOK_MATCHER
+            and isinstance(entry.get("hooks"), list)
+        ):
+            pre_tool_use[index] = {
+                **entry,
+                "hooks": [*entry["hooks"], build_hook_entry()],
+            }
+            break
+    else:
+        pre_tool_use.append(
+            {"matcher": DOGBUILD_HOOK_MATCHER, "hooks": [build_hook_entry()]}
+        )
+
+    hooks["PreToolUse"] = pre_tool_use
+    settings["hooks"] = hooks
+    return settings
+
+
 def write_hooks_config(repo_root: str, *, dry_run: bool = False) -> Dict[str, Any]:
     """Write the PreToolUse hook config to .claude/settings.local.json.
 
     Merges with any existing settings rather than overwriting the whole file.
-    Returns the written config dict.
+    Returns the merged config dict.
     """
     settings_dir = Path(repo_root) / ".claude"
     settings_file = settings_dir / "settings.local.json"
 
-    hooks_config = build_hooks_config()
-
     # Load existing settings if present
-    existing = {}
+    existing: Any = {}
     if settings_file.exists():
         try:
             existing = json.loads(settings_file.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             existing = {}
 
-    # Merge hooks into existing config
-    existing["hooks"] = hooks_config["hooks"]
+    merged = merge_hooks_config(existing)
 
     if not dry_run:
         settings_dir.mkdir(parents=True, exist_ok=True)
         settings_file.write_text(
-            json.dumps(existing, indent=2, sort_keys=True) + "\n",
+            json.dumps(merged, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
 
-    return existing
+    return merged
 
 
 def find_claude() -> Optional[str]:
