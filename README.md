@@ -18,6 +18,28 @@ authority gate, and interrupts the human only on real exceptions.
 - Product source of truth: the spec in `revenue-opportunity-lab`
   (`ideas/active/project-state-keeper.md`), refined by the docs here.
 
+## Quickstart
+
+```bash
+# 1. cd into your project
+cd ~/Desktop/project/your-project
+
+# 2. Initialize DogBuild (first time only)
+dogbuild init . --objective "your project objective"
+
+# 3. Launch DogBuild
+dogbuild start
+
+# 4. Ask "What's happening?" at any time
+# 5. Tell DogBuild to continue the approved milestone
+```
+
+DogBuild is the product entry point. Claude Code runs underneath as the
+execution agent. The first alpha displays a branded DogBuild banner but does
+not replace Claude's interactive interface. Persistent truth lives in the
+project's `.ai/` state, not in the Claude session — so context survives across
+sessions, devices, and interruptions.
+
 ## Scope discipline (MVP)
 
 Local-only · file-based · **no** OpenAI API · **no** browser automation · **no**

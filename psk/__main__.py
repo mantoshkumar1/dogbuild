@@ -15,7 +15,8 @@ from . import (__version__, agentmode, autonomy as autonomy_mod, brief as brief_
                context, core,
                declaration, genesis as genesis_mod, gitutil, goal as goal_mod,
                handoff as handoff_mod, human as human_mod, identity as identity_mod,
-               install as install_mod, park as park_mod, policy as policy_mod,
+               install as install_mod, launcher as launcher_mod, park as park_mod,
+               policy as policy_mod,
                registry, review, store)
 from .errors import (
     AmbiguousContextError,
@@ -341,6 +342,41 @@ def _cmd_install_claude(args) -> int:
     return SUCCESS
 
 
+def _cmd_start(args) -> int:
+    try:
+        result = launcher_mod.start(
+            args.path,
+            permission_mode=args.permission_mode,
+            dry_run=args.dry_run,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return INVALID_USAGE
+    # dry_run returns a result dict; normal mode execs (never returns)
+    if result.get("dry_run"):
+        if args.json:
+            import copy
+            out = copy.deepcopy(result)
+            # Remove the banner text from JSON (it's for humans)
+            out.pop("banner", None)
+            print(json.dumps(out, indent=2, sort_keys=True, default=str))
+        else:
+            print(result["banner"])
+            print(f"  Permission mode:  {result['permission_mode']}")
+            print(f"  Claude executable: {result['claude_executable'] or '(not found)'}")
+            print(f"  Skill status:     {result['skill']['status']}")
+            print()
+            print("  Startup instruction:")
+            for line in result["instruction"].splitlines():
+                print(f"    {line}")
+            print()
+            print("  Claude argument list:")
+            print(f"    {result['args']}")
+            print()
+            print("  (dry run — Claude was not started)")
+    return SUCCESS
+
+
 def _cmd_autonomy_start(args) -> int:
     st = autonomy_mod.start(args.path, args.contract)
     _emit(f"Autonomy {st['status']} (rev {st['autonomy_contract_revision']}, "
@@ -416,6 +452,16 @@ def _build_parser() -> argparse.ArgumentParser:
                                 description="Project State Keeper — local CLI")
     p.add_argument("--version", action="version", version=f"statekeeper {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    # start: branded launcher (launches Claude Code with DogBuild context)
+    pstart = sub.add_parser("start", help="launch Claude Code with DogBuild context")
+    pstart.add_argument("path", nargs="?", default=".")
+    pstart.add_argument("--dry-run", action="store_true",
+                        help="show what would happen; do not start Claude")
+    pstart.add_argument("--permission-mode", default=launcher_mod.DEFAULT_PERMISSION_MODE,
+                        help=f"Claude Code permission mode (default: {launcher_mod.DEFAULT_PERMISSION_MODE})")
+    pstart.add_argument("--json", action="store_true")
+    pstart.set_defaults(func=_cmd_start)
 
     pi = sub.add_parser("init", help="initialize .ai/ state + identity in a git repo")
     pi.add_argument("path", nargs="?", default=".")
