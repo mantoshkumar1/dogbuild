@@ -15,7 +15,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from . import gitutil, identity as identity_mod, policy as policy_mod, store
+from . import autonomy, gitutil, identity as identity_mod, policy as policy_mod, store
 from .errors import ProjectMismatchError, StateNotFoundError, ValidationError
 from .models import (Authority, Decision, DecisionBinding, Event, EventType,
                      SCHEMA_VERSION, Verdict)
@@ -143,6 +143,7 @@ def build_review_request(path: str, *, question: str, action: str,
         "status": "pending", "verdict": None, "conditions": [],
         "revision_count": revision_count, "parent_packet": revision_of,
         "created_at": ts, "decision_id": None,
+        "instruction_epoch": autonomy.current_epoch(root),
     }
     state.reviews[pid] = rec
     state.updated_at = ts

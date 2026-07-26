@@ -11,7 +11,8 @@ import argparse
 import json
 import sys
 
-from . import (__version__, agentmode, brief as brief_mod, context, core,
+from . import (__version__, agentmode, autonomy as autonomy_mod, brief as brief_mod,
+               context, core,
                declaration, genesis as genesis_mod, gitutil, goal as goal_mod,
                handoff as handoff_mod, human as human_mod, identity as identity_mod,
                install as install_mod, park as park_mod, policy as policy_mod,
@@ -340,6 +341,73 @@ def _cmd_install_claude(args) -> int:
     return SUCCESS
 
 
+def _cmd_autonomy_start(args) -> int:
+    st = autonomy_mod.start(args.path, args.contract)
+    _emit(f"Autonomy {st['status']} (rev {st['autonomy_contract_revision']}, "
+          f"epoch {st['instruction_epoch']}); milestone: {st['current_milestone']}",
+          st, args.json)
+    return SUCCESS
+
+
+def _cmd_autonomy_status(args) -> int:
+    st = autonomy_mod.status(args.path)
+    _emit(f"Autonomy: {st['status']} | epoch {st['instruction_epoch']} | pending owner "
+          f"messages: {st['pending_owner_messages']} | next: {st['exact_next_action']}",
+          st, args.json)
+    return SUCCESS
+
+
+def _cmd_autonomy_pause(args) -> int:
+    st = autonomy_mod.pause(args.path); _emit(f"Autonomy {st['status']}", st, args.json)
+    return SUCCESS
+
+
+def _cmd_autonomy_resume(args) -> int:
+    st = autonomy_mod.resume(args.path); _emit(f"Autonomy {st['status']}", st, args.json)
+    return SUCCESS
+
+
+def _cmd_autonomy_stop(args) -> int:
+    st = autonomy_mod.stop(args.path); _emit(f"Autonomy {st['status']}", st, args.json)
+    return SUCCESS
+
+
+def _cmd_input_add(args) -> int:
+    m = autonomy_mod.add_message(args.path, args.message, classification=args.type)
+    _emit(f"Recorded owner message [{m['classification']['type']}] status={m['status']} "
+          f"(epoch@receipt {m['instruction_epoch_at_receipt']})", m, args.json)
+    return SUCCESS
+
+
+def _cmd_input_list(args) -> int:
+    msgs = autonomy_mod.list_messages(args.path, pending_only=args.pending)
+    human = "\n".join(f"- [{m['classification']['type']}/{m['status']}] {m['raw_message']}"
+                       for m in msgs) or "(none)"
+    _emit(human, msgs, args.json)
+    return SUCCESS
+
+
+def _cmd_input_reconcile(args) -> int:
+    ctx = autonomy_mod.reconcile(args.path)
+    lines = [f"Reconciliation (epoch {ctx['instruction_epoch']}, "
+             f"autonomy {ctx['autonomy']['status']}):"]
+    for c in ctx["pending_owner_messages"]:
+        lines.append(f"- {c['classification']}: \"{c['raw_message']}\" -> {c['outcome']}")
+    if not ctx["pending_owner_messages"]:
+        lines.append("- (no pending owner messages)")
+    _emit("\n".join(lines), ctx, args.json)
+    return SUCCESS
+
+
+def _cmd_continuation_show(args) -> int:
+    ctx = autonomy_mod.continuation(args.path)
+    _emit(f"Continuation: {ctx['project']} {ctx['branch']} @ {ctx['head_commit'][:12]} | "
+          f"autonomy {ctx['autonomy_status']} epoch {ctx['instruction_epoch']} | "
+          f"pending {len(ctx['pending_owner_messages'])} | next: {ctx['exact_next_action']}",
+          ctx, args.json)
+    return SUCCESS
+
+
 # --------------------------------------------------------------------------- #
 # parser
 # --------------------------------------------------------------------------- #
@@ -570,6 +638,39 @@ def _build_parser() -> argparse.ArgumentParser:
     insc.add_argument("--dry-run", action="store_true", help="show changes; write nothing")
     insc.add_argument("--json", action="store_true")
     insc.set_defaults(func=_cmd_install_claude)
+
+    # autonomy: owner-away autonomy lifecycle
+    pau = sub.add_parser("autonomy", help="owner-away autonomy lifecycle")
+    ausub = pau.add_subparsers(dest="autonomy_cmd", required=True)
+    aus = ausub.add_parser("start", help="activate a human-approved autonomy contract")
+    aus.add_argument("contract"); aus.add_argument("path", nargs="?", default=".")
+    aus.add_argument("--json", action="store_true"); aus.set_defaults(func=_cmd_autonomy_start)
+    for _n, _fn in (("status", _cmd_autonomy_status), ("pause", _cmd_autonomy_pause),
+                    ("resume", _cmd_autonomy_resume), ("stop", _cmd_autonomy_stop)):
+        _sp = ausub.add_parser(_n, help=f"{_n} autonomy")
+        _sp.add_argument("path", nargs="?", default=".")
+        _sp.add_argument("--json", action="store_true"); _sp.set_defaults(func=_fn)
+
+    # input: pending owner-input queue (internal/diagnostic surface)
+    pin = sub.add_parser("input", help="pending owner-input queue")
+    insub = pin.add_subparsers(dest="input_cmd", required=True)
+    ina = insub.add_parser("add", help="record an owner message")
+    ina.add_argument("message"); ina.add_argument("path", nargs="?", default=".")
+    ina.add_argument("--type", default=None, choices=list(autonomy_mod.CLASSIFICATIONS))
+    ina.add_argument("--json", action="store_true"); ina.set_defaults(func=_cmd_input_add)
+    inl = insub.add_parser("list", help="list owner messages")
+    inl.add_argument("path", nargs="?", default="."); inl.add_argument("--pending", action="store_true")
+    inl.add_argument("--json", action="store_true"); inl.set_defaults(func=_cmd_input_list)
+    inr = insub.add_parser("reconcile", help="reconcile pending owner input before the next reviewer direction")
+    inr.add_argument("path", nargs="?", default="."); inr.add_argument("--json", action="store_true")
+    inr.set_defaults(func=_cmd_input_reconcile)
+
+    # continuation: session-rollover recovery packet
+    pco = sub.add_parser("continuation", help="session-rollover continuation packet")
+    cosub = pco.add_subparsers(dest="continuation_cmd", required=True)
+    cos = cosub.add_parser("show", help="show the continuation packet")
+    cos.add_argument("path", nargs="?", default="."); cos.add_argument("--json", action="store_true")
+    cos.set_defaults(func=_cmd_continuation_show)
 
     return p
 
