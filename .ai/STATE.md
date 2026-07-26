@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-26T01:07:22Z
+- **State updated:** 2026-07-26T16:53:31Z
 
 ## Objective
 
@@ -22,9 +22,9 @@ Reviewer policy + full exception handling slice
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `5457fd48c0a06439f43d4d86ad49e802b95f3436`
+- **HEAD:** `66bf612b64d73a3df8f863a71b06c6b56f87f306`
 - **Worktree:** clean
-- **Captured:** 2026-07-26T01:07:22Z
+- **Captured:** 2026-07-26T16:53:31Z
 
 ## Requested items
 
@@ -188,4 +188,15 @@ Reviewer policy + full exception handling slice
 - Unresolved risks:
   - external demand / payment / distribution unvalidated
   - automatic cross-provider transport deferred (manual structured protocol)
+
+### 2026-07-26T16:53:31Z — Claude hook-settings fix shipped: dogbuild start now writes valid PreToolUse matcher groups; 279 tests green
+
+- Implemented:
+  - build_hooks_config emits matcher-group -> nested hooks-array structure
+  - merge_hooks_config preserves unrelated settings, hook events, and PreToolUse groups
+  - DogBuild's own hook identified by psk.governor.broker marker and replaced in place (idempotent)
+  - legacy flat DogBuild hook entries repaired rather than left behind
+- Next safe action: Owner confirms dogbuild start in a real terminal; do not begin the next slice
+- Unresolved risks:
+  - Interactive TUI startup verified headlessly (no TTY available to the agent); owner should eyeball dogbuild start once
 

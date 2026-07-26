@@ -1,18 +1,18 @@
 {
   "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "Owner-away autonomy + pending owner-input reconciliation for DogBuild",
-  "changed": "Added autonomy engine (contract/lifecycle/instruction-epoch/owner-input queue+classification/reconciliation/continuation/owner-return-brief/self-repair limit), CLI (autonomy, input, continuation), review-request epoch stamping, canonical skill update, 17 tests",
-  "claimed_head": "5457fd48c0a06439f43d4d86ad49e802b95f3436",
-  "created_at": "2026-07-26T01:07:22Z",
+  "building": "Fix DogBuild launcher's generated Claude Code PreToolUse hook settings",
+  "changed": "psk/launcher.py (matcher-group hook shape + non-destructive merge_hooks_config); tests/test_hook_settings.py (20 regression tests)",
+  "claimed_head": "66bf612b64d73a3df8f863a71b06c6b56f87f306",
+  "created_at": "2026-07-26T16:53:18Z",
   "failed": "None",
   "goal_alignment": {
-    "explanation": "Owner-away autonomy inside a human-approved envelope; no APIs/automation/dashboards/Cursor/Codex added",
+    "explanation": "Repairs the existing local control loop; no new permission or governor features added",
     "goal_contract_revision": 1,
     "status": "IN_SCOPE"
   },
-  "incomplete": "Automatic ChatGPT transport intentionally deferred (structured protocol + local fixtures)",
-  "next_action": "Owner runs the fresh-session/owner-return usage; do not begin the next slice",
+  "incomplete": "None",
+  "next_action": "Owner confirms dogbuild start in a real terminal; do not begin the next slice",
   "role": "execution_agent",
-  "verified": "114 unittest tests green (97+17); CLI dogfood: autonomy start/status/pause/resume/stop, input add/reconcile, continuation, statekeeper parity; skill reinstalled idempotently; epoch stays put on state-query/feedback and bumps+stales+pauses on redirect/conflict"
+  "verified": "279 unittest tests green; PhotoSahi .claude/settings.local.json regenerated from the broken file — valid matcher-group shape, all 42 allow / 5 deny / defaultMode preserved, byte-identical across 4 dogbuild start runs; Claude starts with no Settings Error and the broker hook fires on a real tool call"
 }
