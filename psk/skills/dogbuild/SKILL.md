@@ -133,3 +133,125 @@ interruption, or device loss:
 - preserve branch, commit, tests, and any blockers (checkpoint via DogBuild).
 
 A new session must recover from repository evidence, not from a retold conversation.
+
+## Owner-away autonomy (ChatGPT master reviewer)
+
+Authority: the **human owner** has final override; **ChatGPT** is the master
+reviewer and delegated strategy authority; **Claude** is the execution agent;
+**DogBuild** is the persistent state/evidence/enforcement layer.
+
+Inside a human-approved **Autonomy Contract** (activated only when
+`human_approved: true`), Claude may continue an already-approved milestone while
+the owner is away — running verification, repairing in-scope failures, adding a
+required regression test, making local commits, and checkpointing — without
+asking routine questions. Interrupt the owner only for: a material goal/milestone
+change; an action outside the approved envelope; a destructive/external/paid/
+production/secret action; repeated verification failure; insufficient or
+contradictory evidence; a ChatGPT `NEEDS_HUMAN`; or an unresolved ChatGPT–Claude
+disagreement after one evidence-based revision.
+
+Autonomy states: `ACTIVE`, `PAUSED`, `STOPPED`, `COMPLETED`, `NEEDS_HUMAN`,
+`STALE`.
+
+## Pending owner input — never dropped
+
+Every owner message that arrives during execution or review is recorded and
+classified; the next ChatGPT direction must account for all of it. Classify each
+message as one of: `STATE_QUERY`, `NON_BLOCKING_FEEDBACK`, `MATERIAL_INSTRUCTION`,
+`PAUSE_OR_CANCEL`, `HUMAN_DECISION`, or `AMBIGUOUS`. Preserve the exact original
+text; never invent an interpretation the owner did not express.
+
+- `STATE_QUERY` ("What's happening?"): answer in plain English; do not change the
+  Goal Contract; do not increment the instruction epoch; do not invalidate the
+  active review or task; mark it answered; keep executing.
+- `NON_BLOCKING_FEEDBACK` ("Keep it shorter"): record; apply to the next relevant
+  response/detail; do not invalidate unrelated work; do not increment the epoch
+  unless it changes acceptance criteria.
+- `MATERIAL_INSTRUCTION` ("Do not add APIs", "Change the milestone"): preserve it;
+  determine what it changes; **increment the instruction epoch**; invalidate
+  conflicting in-flight packets/decisions/actions; **pause autonomy**; summarize
+  impact; require goal-change confirmation when applicable.
+- `PAUSE_OR_CANCEL`: stop promptly; checkpoint; record the paused step and the
+  exact safe resume action.
+- `HUMAN_DECISION`: verify it answers the pending question and matches project,
+  repo, Goal Contract, HEAD, and epoch; reject stale/unrelated decisions.
+- `AMBIGUOUS` ("I don't like this"): ask ONE focused question (e.g. "change only
+  the explanation, or stop and revise the implementation?"); do not dump history.
+
+## Reconcile before every reviewer direction
+
+Before ChatGPT issues the next direction after a Claude report, build a Reviewer
+Reconciliation Context: every pending owner message since the last reviewer
+instruction (with classification and status), the latest Claude report, live
+repository evidence, the Goal and Autonomy Contracts, the instruction epoch, the
+gate, and unresolved blockers. Order of authority (do not silently merge):
+
+```
+latest explicit owner instruction
+> live repository and verification evidence
+> active Goal Contract and Autonomy Contract
+> latest valid ChatGPT reviewer decision
+> latest Claude execution report
+> older summaries
+```
+
+Record one outcome per message: `ANSWERED_NO_EXECUTION_EFFECT`,
+`APPLIED_AS_FEEDBACK`, `INVALIDATED_IN_FLIGHT_WORK`, `UPDATED_INSTRUCTION_EPOCH`,
+`REQUIRES_CLARIFICATION`, or `RECORDED_HUMAN_DECISION`. Never discard owner input
+just because Claude finished first.
+
+## In-flight race protection (instruction epochs)
+
+Every packet, approval, and execution action carries the instruction epoch (plus
+goal/autonomy revisions and repository HEAD). Immediately before executing an
+approved action, refresh owner input and repository state and compare the epoch.
+A newer `MATERIAL_INSTRUCTION` marks the old packet `STALE`, pauses autonomy, and
+stops execution. A `STATE_QUERY` or unrelated `NON_BLOCKING_FEEDBACK` must NOT
+stale the packet.
+
+## Self-repair limit
+
+On verification failure: diagnose and attempt one in-scope repair; on a second
+failure, one final in-scope repair; still failing → `NEEDS_HUMAN`. On a ChatGPT
+`VETO`: revise once only if there is new machine-verifiable evidence, else stop; a
+second veto or second revision → human conflict brief. No endless loops.
+
+## Goal-change confirmation
+
+A material goal change is never accepted from "okay/yes/sure/do it". Show the
+current goal, the proposed goal, the impact and invalidated work, and the Goal
+Contract diff, then require the exact phrase:
+
+```
+I approve updating the project goal as described above.
+```
+
+Only then create a new Goal Contract revision, increment the epoch, supersede
+stale packets/approvals, update the Autonomy Contract, and resume.
+
+## Owner return brief
+
+When the owner returns after being away, lead with plain English:
+
+```
+Welcome back.
+
+Project:
+Stage:
+Current milestone:
+What completed while you were away:
+What was verified:
+Current task:
+Exact next action:
+Anything blocked:
+Human decision needed: yes/no
+```
+
+## Session rollover
+
+Before context exhaustion or termination, persist: a checkpoint of live state,
+the pending owner input (and which messages were answered/applied), the
+instruction epoch, the Goal and Autonomy Contract revisions, and branch/HEAD/
+tests/blockers/next action. Reuse the existing declaration + continuation
+mechanisms so a fresh session recovers from repository evidence — the owner never
+has to reconstruct the conversation.
