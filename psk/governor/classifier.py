@@ -113,6 +113,23 @@ _TIER0_PATTERNS = [
 _NETWORK_CMDS = re.compile(r"\b(curl|wget|http|fetch)\b")
 _HTTP_MUTATING = re.compile(r"-X\s*(POST|PUT|DELETE|PATCH)\b", re.I)
 _HTTP_DATA = re.compile(r"(-d\s|--data\s|-F\s|--form\s|--upload)")
+_HTTP_AUTH = re.compile(
+    r'(-H\s+["\']?Authorization\b|--header\s+["\']?Authorization\b|'
+    r'-u\s|--user\s|-H\s+["\']?Cookie\b|'
+    r'Bearer\s+\S|Token\s+\S)',
+    re.I,
+)
+
+# Known paid / sensitive API endpoints that must never be treated as
+# generic public web research.
+_PAID_API_DOMAINS = frozenset({
+    "api.openai.com",
+    "api.anthropic.com",
+    "api.stripe.com",
+    "api.twilio.com",
+    "api.sendgrid.com",
+    "api.github.com",
+})
 
 
 def classify_command(cmd: str, policy: Optional[ExecutionPolicy] = None) -> ActionClassification:
@@ -216,12 +233,22 @@ def _classify_network_cmd(cmd: str, policy: Optional[ExecutionPolicy]) -> Action
             reasons=reasons,
         )
 
-    # Check for mutating HTTP methods
+    # Check for authentication headers / credentials in the request.
+    # These are never generic public web research.
+    if _HTTP_AUTH.search(cmd):
+        reasons.append("request carries authentication credentials")
+        return ActionClassification(
+            tier=RiskTier.TIER_3_HIGH_RISK,
+            action_class="secrets_access",
+            reasons=reasons,
+        )
+
+    # Check for mutating HTTP methods (POST/PUT/DELETE/PATCH or data upload)
     if _HTTP_MUTATING.search(cmd) or _HTTP_DATA.search(cmd):
         reasons.append("uses mutating HTTP method or sends data")
         return ActionClassification(
-            tier=RiskTier.TIER_2_MATERIAL,
-            action_class="repository_write",
+            tier=RiskTier.TIER_3_HIGH_RISK,
+            action_class="network_unapproved",
             reasons=reasons,
         )
 
@@ -230,6 +257,15 @@ def _classify_network_cmd(cmd: str, policy: Optional[ExecutionPolicy]) -> Action
     if url_match:
         domain = url_match.group(1).split(":")[0]  # strip port
         reasons.append(f"HTTPS GET to {domain}")
+
+        # Paid / sensitive API endpoints are never public web research
+        if domain in _PAID_API_DOMAINS:
+            reasons.append(f"{domain} is a paid/sensitive API endpoint")
+            return ActionClassification(
+                tier=RiskTier.TIER_4_EXTERNAL,
+                action_class="production_access",
+                reasons=reasons,
+            )
 
         if policy and policy.domain_allowed(domain):
             reasons.append(f"{domain} is in the approved domain list")
@@ -261,10 +297,11 @@ def _classify_network_cmd(cmd: str, policy: Optional[ExecutionPolicy]) -> Action
                 reasons=reasons,
             )
         else:
+            # Unapproved domain → require approval, not auto-execute
             reasons.append("domain not in approved list")
             return ActionClassification(
                 tier=RiskTier.TIER_2_MATERIAL,
-                action_class="public_web_research",
+                action_class="network_unapproved",
                 reasons=reasons,
                 confidence=0.7,
             )
@@ -273,7 +310,7 @@ def _classify_network_cmd(cmd: str, policy: Optional[ExecutionPolicy]) -> Action
     reasons.append("network command without recognizable HTTPS URL")
     return ActionClassification(
         tier=RiskTier.TIER_2_MATERIAL,
-        action_class="public_web_research",
+        action_class="network_unapproved",
         reasons=reasons,
         confidence=0.5,
     )

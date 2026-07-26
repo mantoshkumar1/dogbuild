@@ -313,6 +313,65 @@ Anything blocked:
 Human decision needed: yes/no
 ```
 
+## Permission governance (DogBuild governor)
+
+When DogBuild launches Claude Code (`dogbuild start`), it installs a PreToolUse
+hook that routes every tool call through the DogBuild governor's permission
+broker. The broker classifies each action and returns allow or deny — safe
+routine actions execute without repeated yes/no dialogs.
+
+### What is auto-approved
+
+- **Read-only tools** (Read, Glob, Grep, etc.) targeting paths inside the
+  repository.
+- **In-repository file edits** (Edit, Write) that are not in `.git/`, not
+  secret/credential files, and not protected by policy.
+- **Safe bash commands** classified by the governor as read-only or task-scoped
+  per the active execution policy (git status, git diff, git log, test runners,
+  linters, DogBuild internal commands).
+- **Subagent spawns** (Task, Agent).
+
+### What is denied
+
+- Paths outside the repository (path escape).
+- Writes to `.git/` internals.
+- Writes to secret/credential files (`.env`, `id_rsa`, `.pem`, `.key`, etc.).
+- Writes to policy-protected paths.
+- Hard-denied commands: `git push`, `git merge`, `git rebase`, deployment,
+  `sudo`, `rm -rf`, network upload, package publication, paid API calls,
+  secret access, production changes.
+- Commands requiring human approval (per policy).
+- MCP tools (require human review).
+- Unknown tools not covered by policy.
+
+### What a denial looks like
+
+A denial pauses the affected action safely. Nothing is lost. The broker
+provides a plain-English explanation:
+
+```
+Claude requested an action outside the approved working boundary.
+
+Requested action: Bash
+Reason it stopped: git push is denied by policy
+
+Current work is safely paused.
+Nothing has been lost.
+```
+
+### Raw-Claude mode
+
+`dogbuild start --raw-claude` skips the governor hook and uses Claude Code's
+native permission mode. Use this when you want direct control over Claude Code's
+built-in permission dialogs without the DogBuild policy layer.
+
+### Governor CLI commands
+
+- `statekeeper governor status` — overview of policy, autonomy, hook status
+- `statekeeper governor explain-last` — plain-English explanation of last decision
+- `statekeeper governor test` — run built-in test fixtures
+- `statekeeper governor broker` — hook entry point (reads stdin, writes stdout)
+
 ## Session rollover
 
 Before context exhaustion or termination, persist: a checkpoint of live state,

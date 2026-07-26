@@ -21,6 +21,7 @@ from . import (__version__, agentmode, autonomy as autonomy_mod, brief as brief_
 from .governor import (
     audit as gov_audit,
     brief as gov_brief,
+    broker as gov_broker,
     classifier as gov_classifier,
     decision as gov_decision,
     parser as gov_parser,
@@ -356,6 +357,7 @@ def _cmd_start(args) -> int:
         result = launcher_mod.start(
             args.path,
             permission_mode=args.permission_mode,
+            raw_claude=args.raw_claude,
             dry_run=args.dry_run,
         )
     except ValueError as exc:
@@ -372,8 +374,13 @@ def _cmd_start(args) -> int:
         else:
             print(result["banner"])
             print(f"  Permission mode:  {result['permission_mode']}")
+            print(f"  Raw Claude:       {result['raw_claude']}")
             print(f"  Claude executable: {result['claude_executable'] or '(not found)'}")
             print(f"  Skill status:     {result['skill']['status']}")
+            if result.get("hooks"):
+                print(f"  Hook installed:   PreToolUse → DogBuild governor broker")
+            else:
+                print(f"  Hook installed:   (none — raw-claude mode)")
             print()
             print("  Startup instruction:")
             for line in result["instruction"].splitlines():
@@ -530,6 +537,99 @@ def _cmd_governor_clear(args) -> int:
     return SUCCESS
 
 
+def _cmd_governor_broker(args) -> int:
+    """Run the permission broker from stdin (hook entry point)."""
+    root = None
+    try:
+        root = gitutil.repo_root(args.path)
+    except Exception:
+        pass
+    return gov_broker.broker_from_stdin(repo_root=root)
+
+
+def _cmd_governor_status(args) -> int:
+    """Show governor status: policy, autonomy, hook config."""
+    root = gitutil.repo_root(args.path)
+    pol = gov_policy.load_policy(root)
+    au = {}
+    try:
+        from . import autonomy as autonomy_mod
+        au = autonomy_mod.status(root)
+    except Exception:
+        pass
+
+    hook_cmd = gov_broker.build_hook_command() if gov_broker else ""
+    settings_file = os.path.join(root, ".claude", "settings.local.json")
+    hook_installed = os.path.exists(settings_file)
+
+    status = {
+        "policy_active": pol is not None,
+        "policy_task": pol.scope.task_id if pol else None,
+        "policy_project": pol.scope.project_id if pol else None,
+        "autonomy_status": au.get("status", "INACTIVE"),
+        "instruction_epoch": au.get("instruction_epoch", 1),
+        "hook_installed": hook_installed,
+        "hook_command": hook_cmd,
+        "audit_records": len(gov_audit.read_audit(root)),
+    }
+
+    if args.json:
+        print(json.dumps(status, indent=2, sort_keys=True))
+    else:
+        print(f"  Policy active:     {status['policy_active']}")
+        if pol:
+            print(f"  Policy task:       {status['policy_task']}")
+            print(f"  Policy project:    {status['policy_project']}")
+        print(f"  Autonomy:          {status['autonomy_status']}")
+        print(f"  Instruction epoch: {status['instruction_epoch']}")
+        print(f"  Hook installed:    {status['hook_installed']}")
+        print(f"  Audit records:     {status['audit_records']}")
+    return SUCCESS
+
+
+def _cmd_governor_explain_last(args) -> int:
+    """Explain the last audit decision in plain English."""
+    root = gitutil.repo_root(args.path)
+    records = gov_audit.read_audit(root)
+    if not records:
+        _emit("No audit records to explain.", {"last": None}, args.json)
+        return SUCCESS
+    last = records[-1]
+    d = gov_broker.BrokerDecision(
+        allowed=(last["decision"] == "allow"),
+        reason=last.get("reasons", [""])[0] if last.get("reasons") else "",
+        tool_name=last.get("normalized_command", ""),
+        classification=last.get("classification", ""),
+        details=last.get("reasons", [])[1:] if last.get("reasons") else [],
+    )
+    if args.json:
+        print(json.dumps({"last_record": last, "explanation": d.to_plain_english()},
+                          indent=2, sort_keys=True))
+    else:
+        print(d.to_plain_english())
+    return SUCCESS
+
+
+def _cmd_governor_test(args) -> int:
+    """Run built-in governor test fixtures."""
+    root = gitutil.repo_root(args.path)
+    results = gov_broker.run_test_fixtures(root)
+    passed = sum(1 for r in results if r["passed"])
+    total = len(results)
+    if args.json:
+        print(json.dumps({"passed": passed, "total": total, "results": results},
+                          indent=2, sort_keys=True))
+    else:
+        for r in results:
+            mark = "PASS" if r["passed"] else "FAIL"
+            cmd = r["fixture"].get("tool_input", {}).get("command",
+                  r["fixture"].get("tool_input", {}).get("file_path", ""))
+            print(f"  [{mark}] {r['fixture']['tool_name']:8s} "
+                  f"{r['expected']:5s} → {r['actual']:5s}  {cmd[:50]}")
+        print(f"\n  {passed}/{total} passed")
+    return SUCCESS
+
+
 # --------------------------------------------------------------------------- #
 # parser
 # --------------------------------------------------------------------------- #
@@ -546,6 +646,8 @@ def _build_parser() -> argparse.ArgumentParser:
                         help="show what would happen; do not start Claude")
     pstart.add_argument("--permission-mode", default=launcher_mod.DEFAULT_PERMISSION_MODE,
                         help=f"Claude Code permission mode (default: {launcher_mod.DEFAULT_PERMISSION_MODE})")
+    pstart.add_argument("--raw-claude", action="store_true",
+                        help="skip DogBuild governor hook; use Claude Code's native permissions")
     pstart.add_argument("--json", action="store_true")
     pstart.set_defaults(func=_cmd_start)
 
@@ -847,6 +949,29 @@ def _build_parser() -> argparse.ArgumentParser:
     gb.add_argument("path", nargs="?", default=".")
     gb.add_argument("--json", action="store_true")
     gb.set_defaults(func=_cmd_governor_brief)
+
+    # governor broker (hook entry point — reads stdin, writes stdout)
+    gbr = govsub.add_parser("broker", help="permission broker (PreToolUse hook entry point)")
+    gbr.add_argument("path", nargs="?", default=".")
+    gbr.set_defaults(func=_cmd_governor_broker)
+
+    # governor status
+    gst = govsub.add_parser("status", help="show governor status overview")
+    gst.add_argument("path", nargs="?", default=".")
+    gst.add_argument("--json", action="store_true")
+    gst.set_defaults(func=_cmd_governor_status)
+
+    # governor explain-last
+    gel = govsub.add_parser("explain-last", help="explain the last audit decision")
+    gel.add_argument("path", nargs="?", default=".")
+    gel.add_argument("--json", action="store_true")
+    gel.set_defaults(func=_cmd_governor_explain_last)
+
+    # governor test
+    gt = govsub.add_parser("test", help="run built-in governor test fixtures")
+    gt.add_argument("path", nargs="?", default=".")
+    gt.add_argument("--json", action="store_true")
+    gt.set_defaults(func=_cmd_governor_test)
 
     return p
 

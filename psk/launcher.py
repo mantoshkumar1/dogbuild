@@ -10,11 +10,12 @@ Process exec replaces the launcher so terminal I/O stays clean.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import (brief as brief_mod, gitutil, identity as identity_mod,
                install as install_mod, store)
@@ -25,6 +26,71 @@ from .errors import StateNotFoundError
 _SAFE_MODES = frozenset({"default", "manual", "acceptEdits", "plan", "auto"})
 _DANGEROUS_MODES = frozenset({"bypassPermissions", "dontAsk"})
 DEFAULT_PERMISSION_MODE = "acceptEdits"
+
+
+# ------------------------------------------------------------------ #
+# Hook configuration for Claude Code PreToolUse
+# ------------------------------------------------------------------ #
+
+def _find_psk_root() -> str:
+    """Find the root of the psk package (parent of psk/)."""
+    return str(Path(__file__).resolve().parent.parent)
+
+
+def build_hook_command() -> str:
+    """Build the shell command for the PreToolUse hook.
+
+    Uses PYTHONPATH so the hook subprocess can import psk.governor.broker
+    regardless of where Claude Code runs it from.
+    """
+    psk_root = _find_psk_root()
+    return f"PYTHONPATH={psk_root} python3 -m psk.governor.broker"
+
+
+def build_hooks_config() -> Dict[str, Any]:
+    """Build the hooks section for .claude/settings.local.json."""
+    return {
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "type": "command",
+                    "command": build_hook_command(),
+                }
+            ]
+        }
+    }
+
+
+def write_hooks_config(repo_root: str, *, dry_run: bool = False) -> Dict[str, Any]:
+    """Write the PreToolUse hook config to .claude/settings.local.json.
+
+    Merges with any existing settings rather than overwriting the whole file.
+    Returns the written config dict.
+    """
+    settings_dir = Path(repo_root) / ".claude"
+    settings_file = settings_dir / "settings.local.json"
+
+    hooks_config = build_hooks_config()
+
+    # Load existing settings if present
+    existing = {}
+    if settings_file.exists():
+        try:
+            existing = json.loads(settings_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            existing = {}
+
+    # Merge hooks into existing config
+    existing["hooks"] = hooks_config["hooks"]
+
+    if not dry_run:
+        settings_dir.mkdir(parents=True, exist_ok=True)
+        settings_file.write_text(
+            json.dumps(existing, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    return existing
 
 
 def find_claude() -> Optional[str]:
@@ -193,12 +259,16 @@ def start(
     path: str = ".",
     *,
     permission_mode: str = DEFAULT_PERMISSION_MODE,
+    raw_claude: bool = False,
     dry_run: bool = False,
 ) -> dict:
     """Full start sequence. Returns a result dict.
 
     In normal mode, this function does NOT return — it execs Claude Code.
     In dry-run mode, it returns the full diagnostic dict.
+
+    If *raw_claude* is True, skip DogBuild hook installation and launch
+    Claude Code with its native permission mode (no governor broker).
     """
     # 1. Validate permission mode
     permission_mode = validate_permission_mode(permission_mode)
@@ -228,6 +298,11 @@ def start(
     # 10. Render banner
     banner = render_banner(state)
 
+    # 11. Install permission broker hook (unless --raw-claude)
+    hooks_config = None
+    if not raw_claude:
+        hooks_config = write_hooks_config(root, dry_run=dry_run)
+
     result = {
         "root": root,
         "project": state["project"],
@@ -238,6 +313,8 @@ def start(
         "instruction": instruction,
         "args": args,
         "skill": skill_result,
+        "hooks": hooks_config,
+        "raw_claude": raw_claude,
         "dry_run": dry_run,
     }
 
@@ -254,7 +331,18 @@ def start(
 
     # Print banner
     print(banner)
-    print("  Starting Claude execution agent…\n")
+    if raw_claude:
+        print("  Starting Claude (raw mode — no DogBuild governor)…\n")
+    else:
+        print("  Starting Claude with DogBuild governor…\n")
+
+    # Set PYTHONPATH so hook subprocess can import psk
+    psk_root = _find_psk_root()
+    env_path = os.environ.get("PYTHONPATH", "")
+    if psk_root not in env_path:
+        os.environ["PYTHONPATH"] = (
+            f"{psk_root}:{env_path}" if env_path else psk_root
+        )
 
     # Exec Claude — replaces this process
     os.execvp(claude_path, args)
