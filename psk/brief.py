@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import List, Tuple
 
 from . import (agentmode, declaration, gitutil, identity as identity_mod,
-               policy as policy_mod, review as review_mod, store)
+               plan as plan_mod, policy as policy_mod, review as review_mod, store)
 
 _BLOCKING_GATE = {"STOP_VETO", "STOP_NEEDS_HUMAN", "STOP_POLICY_MISMATCH"}
 
@@ -93,6 +93,22 @@ def build(path: str) -> Tuple[dict, List[str]]:
         "human_decision_reason": reason,
         "active_agent": mode.get("active_execution_agent"),
     }
+
+    # Execution plan fields (if an active plan exists).
+    ep = state.execution_plan
+    if ep:
+        fields["plan_current_task"] = ep.get("current_item", "(none)")
+        fields["plan_completed"] = ep.get("completed", [])
+        fields["plan_remaining"] = ep.get("remaining", [])
+        fields["plan_blocked"] = ep.get("blocked", [])
+        fields["plan_distance"] = plan_mod.distance_label(ep)
+    else:
+        fields["plan_current_task"] = None
+        fields["plan_completed"] = []
+        fields["plan_remaining"] = []
+        fields["plan_blocked"] = []
+        fields["plan_distance"] = "no active plan"
+
     return fields, warnings
 
 
@@ -105,6 +121,20 @@ def render_text(fields: dict, warnings: List[str]) -> str:
         f"What just completed:  {fields['what_just_completed']}\n"
         f"Current verified state: {fields['current_verified_state']}\n"
         f"Exact next action:    {fields['exact_next_action']}\n"
+    )
+    # Execution plan section (only when an active plan exists).
+    if fields.get("plan_current_task") is not None:
+        completed = fields.get("plan_completed", [])
+        remaining = fields.get("plan_remaining", [])
+        blocked = fields.get("plan_blocked", [])
+        out += (
+            f"Current task:         {fields['plan_current_task']}\n"
+            f"Completed:            {', '.join(completed) if completed else '(none)'}\n"
+            f"Remaining:            {', '.join(remaining) if remaining else '(none)'}\n"
+            f"Blocked:              {', '.join(blocked) if blocked else '(none)'}\n"
+            f"Distance to delivery: {fields.get('plan_distance', 'unknown')}\n"
+        )
+    out += (
         f"Reviewer policy:      {fields['reviewer_policy']}\n"
         f"Current gate:         {fields['current_gate']}\n"
         f"Pending conditions:   {fields['pending_conditions']}\n"

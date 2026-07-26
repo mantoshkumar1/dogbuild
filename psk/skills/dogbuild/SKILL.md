@@ -122,12 +122,78 @@ Do not treat casual feedback as a goal change. A material goal change requires:
 
 Human authority is supreme.
 
+## Execution plan sync
+
+When starting a genuinely complex task (multiple acceptance criteria, several
+implementation steps), create a short execution plan (3–7 steps) derived from:
+
+- the active Goal Contract
+- current milestone
+- acceptance criteria
+- explicit exclusions
+- exact next action
+
+Do not create a large backlog. The plan is a session aid, not a project database.
+
+### What to persist
+
+Session-local detail (a Claude todo list inside one session) is NOT persisted.
+At meaningful boundaries (checkpoint, commit, verification, pause, session
+rollover, task completion), persist only decision-relevant progress:
+
+- completed steps
+- current step
+- remaining acceptance criteria
+- blockers
+- exact next safe action
+
+### Scope protection
+
+The active execution plan must contain only work needed for the current milestone.
+
+- Necessary for acceptance → add to the current plan.
+- Useful but not necessary → park it and continue.
+- Materially changes the goal or milestone → stop and request a formal human decision.
+
+Do not let optional ideas silently enter the active plan.
+
+### Simple tasks
+
+Simple tasks (a quick fix, a single-file change, a state query) do not need an
+execution plan. Only create one when the task has enough moving parts that
+losing context mid-task would cost real recovery time.
+
+### Answering state queries during execution
+
+When the user asks "What's happening?" or "What remains?" during an active plan,
+answer from the current plan in plain English. A state query must not pause
+execution, change the goal, invalidate the task, or increment the instruction
+epoch. Example:
+
+```
+We are improving DogBuild's execution tracking.
+
+Completed: state-model update.
+Current task: update the skill.
+Remaining: add tests, run full verification.
+
+Nothing is blocked.
+You do not need to make a decision.
+```
+
+### Session recovery
+
+A fresh session must reconstruct the active plan from persistent DogBuild state
+(the execution_plan field in state.json) without asking the user to repeat what
+happened. Always prioritize delivery over displaying coding sophistication.
+
 ## Session continuity
 
 Claude sessions are disposable. Before stopping for context exhaustion,
 interruption, or device loss:
 
 - write a current declaration (`dogbuild declare …`);
+- update the execution plan if one is active;
 - preserve the current stage;
 - preserve the exact next safe action;
 - preserve branch, commit, tests, and any blockers (checkpoint via DogBuild).

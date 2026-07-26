@@ -207,6 +207,8 @@ class ProjectState:
     # Recorded human decisions keyed by id (plain dicts).
     human_decisions: Dict[str, dict] = field(default_factory=dict)
     last_checkpoint_id: Optional[str] = None
+    # Execution plan — lightweight session-to-session progress tracking (plain dict).
+    execution_plan: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return to_jsonable(self)
@@ -339,4 +341,5 @@ def _state_from_dict(d: dict) -> ProjectState:
         parked_ideas=[dict(x) for x in d.get("parked_ideas", [])],
         human_decisions={k: dict(v) for k, v in d.get("human_decisions", {}).items()},
         last_checkpoint_id=d.get("last_checkpoint_id"),
+        execution_plan=(dict(d["execution_plan"]) if d.get("execution_plan") else None),
     )
