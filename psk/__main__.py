@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from . import (__version__, agentmode, autonomy as autonomy_mod, brief as brief_mod,
@@ -558,7 +559,11 @@ def _cmd_governor_status(args) -> int:
     except Exception:
         pass
 
-    hook_cmd = gov_broker.build_hook_command() if gov_broker else ""
+    try:
+        from .launcher import build_hook_command
+        hook_cmd = build_hook_command()
+    except Exception:
+        hook_cmd = ""
     settings_file = os.path.join(root, ".claude", "settings.local.json")
     hook_installed = os.path.exists(settings_file)
 
