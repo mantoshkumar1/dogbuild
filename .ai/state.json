@@ -100,6 +100,39 @@
         "founder real macOS ~/.claude not reachable from this VM (skill delivered as file + install command)"
       ]
     },
+    "351ab525-0d91-4271-b19a-de6e3cc33202": {
+      "created_at": "2026-07-26T01:07:22Z",
+      "evidence_ids": [],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-26T01:07:22Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "5457fd48c0a06439f43d4d86ad49e802b95f3436"
+      },
+      "id": "351ab525-0d91-4271-b19a-de6e3cc33202",
+      "implemented": [
+        "psk/autonomy.py: human-approved Autonomy Contract + lifecycle + instruction epoch",
+        "owner-input queue with 6-way classification + reconciliation (per-message outcomes)",
+        "in-flight race protection via instruction epoch on review requests",
+        "continuation packet + owner-return brief + self-repair limit + goal-change confirmation phrase",
+        "CLI: dogbuild autonomy/input/continuation (statekeeper aliases preserved)",
+        "canonical Claude skill updated with the autonomy/reconciliation rules"
+      ],
+      "next_safe_action": "Owner runs the fresh-session/owner-return usage; do not begin the next slice",
+      "summary": "Owner-away autonomy + pending owner-input reconciliation shipped; 114 tests green",
+      "tested": [
+        "114 unittest tests green (97+17)",
+        "CLI dogfood: autonomy lifecycle, input classify+reconcile, continuation, statekeeper parity",
+        "state query/feedback do not stale an approval; redirect/conflict bump epoch, stale packet, pause autonomy; unrelated exclusion does not invalidate"
+      ],
+      "unresolved_risks": [
+        "external demand / payment / distribution unvalidated",
+        "automatic cross-provider transport deferred (manual structured protocol)"
+      ]
+    },
     "387d14f2-5a55-402f-abe5-3e50456cd30a": {
       "created_at": "2026-07-25T22:33:27Z",
       "evidence_ids": [],
@@ -489,11 +522,11 @@
   },
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-25T23:30:33Z",
+    "captured_at": "2026-07-26T01:07:22Z",
     "detached": false,
     "dirty": false,
     "dirty_fingerprint": null,
-    "head_commit": "4c74fb20df690a8b6a5cea9486ffa77a42355599"
+    "head_commit": "5457fd48c0a06439f43d4d86ad49e802b95f3436"
   },
   "goal_contract": {
     "acceptance_criteria": [
@@ -626,7 +659,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "2740fddd-e6c1-4477-a39f-d345126e802c",
+  "last_checkpoint_id": "351ab525-0d91-4271-b19a-de6e3cc33202",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -940,5 +973,5 @@
     "set_at": "2026-07-25T21:59:04Z",
     "version": 7
   },
-  "updated_at": "2026-07-25T23:30:33Z"
+  "updated_at": "2026-07-26T01:07:22Z"
 }

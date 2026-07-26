@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-25T23:30:33Z
+- **State updated:** 2026-07-26T01:07:22Z
 
 ## Objective
 
@@ -22,9 +22,9 @@ Reviewer policy + full exception handling slice
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `4c74fb20df690a8b6a5cea9486ffa77a42355599`
+- **HEAD:** `5457fd48c0a06439f43d4d86ad49e802b95f3436`
 - **Worktree:** clean
-- **Captured:** 2026-07-25T23:30:33Z
+- **Captured:** 2026-07-26T01:07:22Z
 
 ## Requested items
 
@@ -174,4 +174,18 @@ Reviewer policy + full exception handling slice
 - Unresolved risks:
   - external demand / payment / distribution unvalidated
   - founder real macOS ~/.claude not reachable from this VM (skill delivered as file + install command)
+
+### 2026-07-26T01:07:22Z — Owner-away autonomy + pending owner-input reconciliation shipped; 114 tests green
+
+- Implemented:
+  - psk/autonomy.py: human-approved Autonomy Contract + lifecycle + instruction epoch
+  - owner-input queue with 6-way classification + reconciliation (per-message outcomes)
+  - in-flight race protection via instruction epoch on review requests
+  - continuation packet + owner-return brief + self-repair limit + goal-change confirmation phrase
+  - CLI: dogbuild autonomy/input/continuation (statekeeper aliases preserved)
+  - canonical Claude skill updated with the autonomy/reconciliation rules
+- Next safe action: Owner runs the fresh-session/owner-return usage; do not begin the next slice
+- Unresolved risks:
+  - external demand / payment / distribution unvalidated
+  - automatic cross-provider transport deferred (manual structured protocol)
 
