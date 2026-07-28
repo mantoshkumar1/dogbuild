@@ -7,12 +7,126 @@ NEEDS_HUMAN_SCOPE_CHANGE.
 
 from __future__ import annotations
 
+import re
 from typing import List, Tuple
 
 from . import (agentmode, declaration, gitutil, identity as identity_mod,
                plan as plan_mod, policy as policy_mod, review as review_mod, store)
 
 _BLOCKING_GATE = {"STOP_VETO", "STOP_NEEDS_HUMAN", "STOP_POLICY_MISMATCH"}
+
+# Autonomy states in which no task can be under way.
+_IDLE_AUTONOMY = {"STOPPED", "INACTIVE", "COMPLETE", "PAUSED", "NOT_STARTED"}
+
+
+def _head_of(git_state) -> str:
+    """HEAD commit from a GitState dataclass or a plain dict."""
+    if git_state is None:
+        return ""
+    if isinstance(git_state, dict):
+        return git_state.get("head_commit") or ""
+    return getattr(git_state, "head_commit", "") or ""
+
+
+# Sentences that carry an actual verification result.
+_RESULT_SENTENCE = re.compile(
+    r"\d+\s*(pass|fail|passed|failed|passing|failing|error)"
+    r"|\bexit\s+[0-9]+\b"
+    r"|\b(pass|fail|green|red)\b\s*/\s*\d",
+    re.I,
+)
+
+_EVIDENCE_BUDGET = 260
+
+
+def _summarize_evidence(text: str) -> str:
+    """Condense a long verification narrative to its test results.
+
+    A declaration's `verified` field is written for a reviewer and can run to
+    a paragraph. The one-line orientation needs the results, not the prose —
+    and truncating would drop the numbers, which come last.
+    """
+    text = (text or "").strip()
+    if not text or len(text) <= _EVIDENCE_BUDGET:
+        return text or "unknown"
+
+    sentences = [s.strip() for s in re.split(r"(?<=[.;])\s+", text) if s.strip()]
+    results = [s for s in sentences if _RESULT_SENTENCE.search(s)]
+    if not results:
+        return sentences[0][:_EVIDENCE_BUDGET].rstrip() + " …"
+
+    out = ""
+    for sentence in results:
+        candidate = f"{out} {sentence}".strip()
+        if len(candidate) > _EVIDENCE_BUDGET:
+            break
+        out = candidate
+    return out or results[0][:_EVIDENCE_BUDGET].rstrip() + " …"
+
+
+def _checkpoint_at_head(state, head: str):
+    """The newest checkpoint recorded at *head*, or None.
+
+    Checkpoints carry the git state they were taken at. One taken at an older
+    commit describes the past, however recently it was written.
+    """
+    if not head:
+        return None
+    matches = [cp for cp in state.checkpoints.values()
+               if _head_of(cp.git_state) == head]
+    if not matches:
+        return None
+    return max(matches, key=lambda cp: cp.created_at or "")
+
+
+def _current_evidence(current_cp, decl_current, gc, last_cp, cp_is_stale):
+    """Resolve (what_just_completed, tested, exact_next_action, source).
+
+    Applies the order of truth. Falls back down the chain only when the higher
+    source has nothing to say about the *current* commit.
+    """
+    if current_cp is not None:
+        return (
+            current_cp.summary,
+            "; ".join(current_cp.tested) if current_cp.tested else "unknown",
+            current_cp.next_safe_action or (gc.get("exact_next_action") if gc else "(none)"),
+            "checkpoint at the current commit",
+        )
+
+    if decl_current:
+        # A declaration is an agent claim, not canonical truth — but one made
+        # AT the live commit is better evidence than a checkpoint made before it.
+        return (
+            decl_current.get("building") or "(no checkpoint at the current commit)",
+            _summarize_evidence(decl_current.get("verified"))
+            if decl_current.get("verified") else "not recorded for the current commit",
+            decl_current.get("next_action")
+            or (gc.get("exact_next_action") if gc else "(none)"),
+            "agent declaration at the current commit",
+        )
+
+    if cp_is_stale:
+        return (
+            "(nothing recorded at the current commit)",
+            "not recorded for the current commit",
+            gc.get("exact_next_action") if gc else "(none)",
+            "goal contract (no evidence at the current commit)",
+        )
+
+    if last_cp is not None:
+        return (
+            last_cp.summary,
+            "; ".join(last_cp.tested) if last_cp.tested else "unknown",
+            last_cp.next_safe_action or (gc.get("exact_next_action") if gc else "(none)"),
+            "latest checkpoint",
+        )
+
+    return (
+        "(no checkpoint yet)",
+        "unknown",
+        gc.get("exact_next_action") if gc else "(none)",
+        "goal contract",
+    )
 
 
 def build(path: str) -> Tuple[dict, List[str]]:
@@ -30,6 +144,9 @@ def build(path: str) -> Tuple[dict, List[str]]:
         pol, policy_label = None, "(none)"
 
     last_cp = state.checkpoints.get(state.last_checkpoint_id) if state.last_checkpoint_id else None
+    # A checkpoint recorded at an older commit is history, not current status.
+    current_cp = _checkpoint_at_head(state, live["head_commit"])
+    cp_is_stale = bool(last_cp) and current_cp is None
 
     # Latest reviewer gate (if any imported decision).
     gate_result, pending_conditions = "none", 0
@@ -51,6 +168,12 @@ def build(path: str) -> Tuple[dict, List[str]]:
     if decl and not decl_current:
         warnings.append("The latest agent declaration references an older HEAD; "
                         "ignoring it in favour of live git evidence.")
+    if cp_is_stale:
+        warnings.append(
+            "The last checkpoint was recorded at "
+            f"{(_head_of(last_cp.git_state) or 'an older commit')[:12]}, "
+            f"before the current commit {(live['head_commit'] or '')[:12]}. "
+            "It is shown as history; current status comes from newer evidence.")
 
     # Blocking (current) conditions only.
     human_needed, reason = False, ""
@@ -68,9 +191,14 @@ def build(path: str) -> Tuple[dict, List[str]]:
 
     goal_alignment = ((decl.get("goal_alignment") or {}).get("status")
                       if decl_current else "IN_SCOPE") or "IN_SCOPE"
-    exact_next = (last_cp.next_safe_action if last_cp
-                  else (gc.get("exact_next_action") if gc else "(none)"))
-    tested = "; ".join(last_cp.tested) if last_cp and last_cp.tested else "unknown"
+
+    # Order of truth for "what is true right now", highest first:
+    #   live git > checkpoint recorded AT the live HEAD > current declaration
+    #   > goal contract > older checkpoints (history only).
+    # A stale checkpoint must never supply current test evidence, the last
+    # completed work, or the next action — that was the stale-orientation bug.
+    completed, tested, exact_next, source = _current_evidence(
+        current_cp, decl if decl_current else None, gc, last_cp, cp_is_stale)
 
     fields = {
         "product": gc["product_name"] if gc else ident.display_name,
@@ -78,11 +206,17 @@ def build(path: str) -> Tuple[dict, List[str]]:
         "problem": gc["problem"] if gc else "(no goal contract)",
         "current_milestone": gc["current_milestone"] if gc else (
             state.scope.description if state.scope else "(not set)"),
-        "what_just_completed": last_cp.summary if last_cp else "(no checkpoint yet)",
+        "what_just_completed": completed,
         "current_verified_state": (
             f"{live['branch']} @ {(live['head_commit'] or 'unborn')[:12]}, "
             f"worktree {'clean' if not live['dirty'] else 'dirty'} (ignoring .ai); "
             f"tests: {tested}"),
+        "evidence_source": source,
+        "checkpoint_is_historical": cp_is_stale,
+        "historical_note": (
+            f"Earlier checkpoint at "
+            f"{_head_of(last_cp.git_state)[:12]}: {last_cp.summary}"
+            if cp_is_stale and last_cp else ""),
         "exact_next_action": exact_next,
         "reviewer_policy": policy_label,
         "current_gate": gate_result,
@@ -108,6 +242,30 @@ def build(path: str) -> Tuple[dict, List[str]]:
         fields["plan_remaining"] = []
         fields["plan_blocked"] = []
         fields["plan_distance"] = "no active plan"
+
+    # Is any task actually under way? A milestone that nothing is working
+    # towards must not be presented as active merely because the Goal Contract
+    # has not been manually revised. This reports status; it never changes the
+    # product goal.
+    autonomy_status = "INACTIVE"
+    try:
+        from . import autonomy as autonomy_mod
+        autonomy_status = autonomy_mod.status(root).get("status", "INACTIVE")
+    except Exception:
+        pass
+
+    no_active_task = (
+        not fields["plan_current_task"]
+        and str(autonomy_status).upper() in _IDLE_AUTONOMY
+    )
+    fields["autonomy_status"] = autonomy_status
+    fields["has_active_task"] = not no_active_task
+    fields["current_task"] = (
+        fields["plan_current_task"] if not no_active_task else "None")
+    fields["milestone_status"] = (
+        "pending-next-milestone" if no_active_task else "active")
+    fields["next_step"] = (
+        "No task selected" if no_active_task else fields["exact_next_action"])
 
     return fields, warnings
 

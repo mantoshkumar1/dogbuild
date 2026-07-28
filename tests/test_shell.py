@@ -200,7 +200,7 @@ class TestStateQueryAnswers(ShellRepoCase):
         self.assertEqual(claude.sent, [], "Claude was invoked for a state query")
         text = "\n".join(out)
         self.assertIn("Milestone:", text)
-        self.assertIn("Next action:", text)
+        self.assertIn("Next step:", text)
 
     def test_answer_is_plain_english_not_jargon(self):
         fields, warnings = shell.load_live(self.root)
