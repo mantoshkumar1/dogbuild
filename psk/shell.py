@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import brief as brief_mod, park as park_mod, store, util
+from .governor import turngrant as turngrant_mod
 
 # The visible prompt. Capitalization is part of the product; do not change it.
 PROMPT = "dogBuild>"
@@ -165,32 +166,49 @@ def answer_state_query(fields: dict, warnings: List[str], kind: str) -> str:
         # derive_stage() is product-qualified for the banner; don't say it twice.
         stage = derive_stage(fields)
         phrase = stage[len(product) + 1:] if stage.startswith(f"{product} ") else stage
+        milestone = fields.get("current_milestone")
+        if fields.get("milestone_status") == "pending-next-milestone":
+            milestone = f"{milestone} (no task selected — awaiting the next milestone)"
         out = [
             f"{product} is in {phrase}.",
-            f"Milestone: {fields.get('current_milestone')}",
+            f"Milestone: {milestone}",
+            f"Current task: {fields.get('current_task', 'None')}",
             f"Last completed: {fields.get('what_just_completed')}",
             f"Live state: {fields.get('current_verified_state')}",
-            f"Next action: {fields.get('exact_next_action')}",
+            f"Next step: {fields.get('next_step', fields.get('exact_next_action'))}",
         ]
+        if fields.get("next_step") == "No task selected":
+            out.append(f"When a task is selected: {fields.get('exact_next_action')}")
         if human == "Yes":
             out.append(f"A human decision is needed: {reason or 'see `review`'}.")
         else:
             out.append("No human decision is needed right now.")
+        if fields.get("historical_note"):
+            out.append(f"Earlier, for history only — {fields['historical_note']}")
         for w in warnings:
             out.append(f"Warning: {w}")
         return "\n".join(out)
 
     if kind == "next":
-        out = [f"Next action: {fields.get('exact_next_action')}"]
-        if fields.get("plan_current_task"):
-            out.append(f"Current task: {fields['plan_current_task']}")
+        out = [
+            f"Current task: {fields.get('current_task', 'None')}",
+            f"Next step: {fields.get('next_step', fields.get('exact_next_action'))}",
+        ]
+        if fields.get("next_step") == "No task selected":
+            out.append(f"When a task is selected: {fields.get('exact_next_action')}")
         if human == "Yes":
             out.append(f"Blocked until a human decides: {reason or 'see `review`'}.")
         return "\n".join(out)
 
     if kind == "tests":
+        fragment = _tests_fragment(fields.get("current_verified_state", ""))
+        if fragment.startswith("not recorded"):
+            return (
+                "No test evidence is recorded for the current commit.\n"
+                "Ask DogBuild to run the suite if you need fresh evidence."
+            )
         return (
-            f"Last recorded test evidence: {_tests_fragment(fields.get('current_verified_state', ''))}\n"
+            f"Last recorded test evidence: {fragment}\n"
             "That is the last verified record, not a run just now. "
             "Ask DogBuild to run the suite if you need fresh evidence."
         )
@@ -564,17 +582,48 @@ class DogBuildShell:
             self._respond(paused)
             return True
 
+        # A direct owner instruction that only asks to look and verify may
+        # authorize this one turn, even when autonomy is stopped. The grant is
+        # created here and destroyed in the finally below — never reused.
+        grant = self._open_turn_grant(text)
+
         self.say("  … Claude Code is working (DogBuild is the interface).")
         try:
             ok, response = self.claude.send(text)
         except KeyboardInterrupt:
             self._respond("  (interrupted — nothing further was sent)")
             return True
+        finally:
+            self._close_turn_grant(grant)
 
         if ok:
             save_session(self.root, self.claude.session_id, self.claude.turns)
         self._respond(response or "(no output)")
         return True
+
+    # -- turn-scoped owner authorization -------------------------------- #
+
+    def _open_turn_grant(self, text: str) -> Optional[dict]:
+        """Create a turn grant for *text* if it is a clear look-and-verify ask."""
+        try:
+            grant = turngrant_mod.create(self.root, text)
+        except Exception:
+            return None
+        if grant:
+            self.say(
+                "  Owner authorization for this turn: read the repository and "
+                "run existing tests. No edits, commits, installs, or network."
+            )
+        return grant
+
+    def _close_turn_grant(self, grant: Optional[dict]) -> None:
+        """Expire the grant. Runs after every turn — success, failure, or Ctrl-C."""
+        if not grant:
+            return
+        try:
+            turngrant_mod.expire(self.root, reason="turn complete")
+        except Exception:
+            pass
 
     # -- main loop ------------------------------------------------------ #
 
@@ -583,6 +632,10 @@ class DogBuildShell:
             import readline  # noqa: F401
         except Exception:
             pass
+
+        # A grant must never survive the process that created it. Anything
+        # left behind by a crash or a kill is dead on arrival.
+        self._close_turn_grant({"turn_id": "startup-sweep"})
 
         self.refresh()
         self.say(render_banner(self.fields, self.warnings))
@@ -609,6 +662,7 @@ class DogBuildShell:
             except Exception as exc:  # a bad turn must not kill the session
                 self._respond(f"  DogBuild hit an error on that turn: {exc}")
 
+        self._close_turn_grant({"turn_id": "shutdown-sweep"})
         self.say("Leaving DogBuild. Project state stays in .ai/ — nothing is lost.")
         return 0
 

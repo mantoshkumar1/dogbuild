@@ -27,9 +27,26 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from . import turngrant as turngrant_mod
 from .classifier import RiskTier, classify_command
 from .decision import decide
 from .policy import ActionLevel, ExecutionPolicy, load_policy
+
+# Risk tiers in ascending order, so a grant can compare against a ceiling.
+_TIER_ORDER = [
+    RiskTier.TIER_0_READ_ONLY,
+    RiskTier.TIER_1_REVERSIBLE,
+    RiskTier.TIER_2_MATERIAL,
+    RiskTier.TIER_3_HIGH_RISK,
+    RiskTier.TIER_4_EXTERNAL,
+]
+
+
+def _tier_index(tier: RiskTier) -> int:
+    try:
+        return _TIER_ORDER.index(tier)
+    except ValueError:
+        return len(_TIER_ORDER)
 
 
 # ------------------------------------------------------------------ #
@@ -44,6 +61,12 @@ READONLY_TOOLS = frozenset({
 
 # Claude Code tools that write files.
 WRITE_TOOLS = frozenset({"Edit", "Write", "NotebookEdit"})
+
+# Claude Code's skill-loading tool.
+SKILL_TOOLS = frozenset({"Skill"})
+
+# The only skill the broker will load without human review.
+ALLOWED_SKILL = "dogbuild"
 
 # Paths that must never be written by the broker.
 PROTECTED_NAMES = frozenset({
@@ -70,6 +93,7 @@ class BrokerDecision:
     classification: str = ""
     confidence: float = 1.0
     details: List[str] = field(default_factory=list)
+    turn_grant_id: str = ""   # set when a turn-scoped owner grant decided this
 
     def to_hook_json(self) -> dict:
         """Format as Claude Code PreToolUse hook JSON output."""
@@ -97,6 +121,7 @@ class BrokerDecision:
             "classification": self.classification,
             "confidence": self.confidence,
             "details": self.details,
+            "turn_grant_id": self.turn_grant_id,
         }
 
     def to_plain_english(self) -> str:
@@ -235,6 +260,119 @@ def _is_known_safe_bash(cmd: str, repo_root: str,
 
 
 # ------------------------------------------------------------------ #
+# Turn-scoped owner grant
+# ------------------------------------------------------------------ #
+
+def _grant_decision_for_bash(
+    command: str,
+    grant: Dict[str, Any],
+    policy: Optional[ExecutionPolicy],
+) -> Optional[BrokerDecision]:
+    """Decide a Bash command under a turn grant, or None to fall through.
+
+    Returns an allow only for the grant's own action classes at tier 0–1.
+    Anything else is denied here rather than falling through, so a grant can
+    never be the reason a wider action slipped past.
+    """
+    cls = classify_command(command.strip(), policy)
+    tier = _tier_index(cls.tier)
+    grant_id = str(grant.get("turn_id", ""))
+
+    if turngrant_mod.permits(grant, cls.action_class, tier):
+        return BrokerDecision(
+            allowed=True,
+            reason=f"turn-scoped owner grant: {cls.action_class}",
+            classification=cls.action_class,
+            confidence=cls.confidence,
+            details=[turngrant_mod.describe(grant), *cls.reasons],
+            turn_grant_id=grant_id,
+        )
+
+    # DogBuild's own state commands stay available under a grant.
+    if _is_dogbuild_command(command):
+        return None
+
+    return BrokerDecision(
+        allowed=False,
+        reason=(
+            f"outside the turn-scoped owner grant: {cls.action_class} is not "
+            f"read-only or an existing local test"
+        ),
+        classification=cls.action_class,
+        confidence=cls.confidence,
+        details=[turngrant_mod.describe(grant), *cls.reasons],
+        turn_grant_id=grant_id,
+    )
+
+
+# ------------------------------------------------------------------ #
+# Skill loading
+# ------------------------------------------------------------------ #
+
+def _requested_skill(tool_input: Dict[str, Any]) -> str:
+    """Normalize the skill name out of a Skill tool call."""
+    for key in ("skill", "name", "skill_name", "command"):
+        value = tool_input.get(key)
+        if isinstance(value, str) and value.strip():
+            # Tolerate "/dogbuild" and "dogbuild some args".
+            return value.strip().lstrip("/").split()[0]
+    return ""
+
+
+def _skill_is_installed(skill: str, repo_root: str) -> bool:
+    """True if *skill* is present in an expected user or project location."""
+    from ..install import default_skills_root
+
+    candidates = [default_skills_root() / skill]
+    if repo_root:
+        candidates.append(Path(repo_root) / ".claude" / "skills" / skill)
+    return any((c / "SKILL.md").is_file() for c in candidates)
+
+
+def _identity_is_valid(repo_root: str) -> bool:
+    try:
+        from .. import identity as identity_mod
+        return bool(identity_mod.load_identity(repo_root).project_id)
+    except Exception:
+        return False
+
+
+def _classify_skill(tool_input: Dict[str, Any], repo_root: str) -> BrokerDecision:
+    """Allow only the DogBuild skill; every other skill needs human review.
+
+    Loading the DogBuild skill reads one Markdown file and changes nothing in
+    the repository, so it is audited as a read-only DogBuild action.
+    """
+    skill = _requested_skill(tool_input)
+    if not skill:
+        return _deny("Skill tool call did not name a skill",
+                     classification="unknown_skill", confidence=0.5)
+
+    if skill != ALLOWED_SKILL:
+        return _deny(
+            f"only the DogBuild skill loads without human review; requested: {skill}",
+            classification="unknown_skill", confidence=0.7,
+        )
+
+    if not _skill_is_installed(skill, repo_root):
+        return _deny(
+            f"the {ALLOWED_SKILL} skill is not installed in an expected location "
+            f"(run `dogbuild install claude`)",
+            classification="skill_not_installed",
+        )
+
+    if not _identity_is_valid(repo_root):
+        return _deny(
+            "project identity is missing or unreadable; refusing to load the "
+            "DogBuild skill for an unidentified repository",
+            classification="identity_invalid",
+        )
+
+    return _allow("DogBuild skill load (read-only; no repository change)",
+                  classification="dogbuild_skill_load", confidence=1.0)
+
+
+# ------------------------------------------------------------------ #
 # Main broker logic
 # ------------------------------------------------------------------ #
 
@@ -246,17 +384,22 @@ def classify_tool_call(
     policy: Optional[ExecutionPolicy] = None,
     autonomy_status: str = "INACTIVE",
     instruction_epoch: int = 1,
+    turn_grant: Optional[Dict[str, Any]] = None,
 ) -> BrokerDecision:
     """Classify a Claude Code tool call and return an allow/deny decision.
 
     This is the central broker function.  All permission decisions flow
-    through here.
+    through here.  *turn_grant*, when present, is a turn-scoped owner grant
+    (see `psk.governor.turngrant`) that authorizes read and existing-test
+    actions for one Claude turn — and nothing else.
     """
     decision = _classify_tool_inner(
         tool_name, tool_input, cwd, repo_root, policy,
-        autonomy_status, instruction_epoch,
+        autonomy_status, instruction_epoch, turn_grant,
     )
     decision.tool_name = tool_name
+    if turn_grant and not decision.turn_grant_id:
+        decision.turn_grant_id = str(turn_grant.get("turn_id", ""))
     return decision
 
 
@@ -268,8 +411,13 @@ def _classify_tool_inner(
     policy: Optional[ExecutionPolicy],
     autonomy_status: str,
     instruction_epoch: int,
+    turn_grant: Optional[Dict[str, Any]] = None,
 ) -> BrokerDecision:
     """Inner classification logic."""
+
+    # ---- DogBuild skill load ----
+    if tool_name in SKILL_TOOLS:
+        return _classify_skill(tool_input, repo_root)
 
     # ---- Read-only tools ----
     if tool_name in READONLY_TOOLS:
@@ -286,6 +434,12 @@ def _classify_tool_inner(
 
     # ---- Write tools ----
     if tool_name in WRITE_TOOLS:
+        if turn_grant and not turn_grant.get("write_allowed"):
+            return _deny(
+                "the owner authorized one read-and-verify turn; edits are not "
+                "covered by a turn-scoped grant",
+                classification="turn_grant_denied",
+            )
         path = tool_input.get("file_path", "")
         if not path:
             return _deny("no file path specified for write operation",
@@ -318,6 +472,14 @@ def _classify_tool_inner(
         if not command:
             return _deny("empty bash command",
                          classification="empty_command")
+
+        # A turn-scoped owner grant is consulted before the policy path, so a
+        # direct owner instruction can authorize read + existing tests even
+        # when autonomy is stopped and no execution policy is seeded.
+        if turn_grant:
+            granted = _grant_decision_for_bash(command, turn_grant, policy)
+            if granted is not None:
+                return granted
 
         result = _is_known_safe_bash(command, repo_root, policy)
         if result is not None:
@@ -353,6 +515,7 @@ def record_broker_decision(
     tool_input: Dict[str, Any],
     decision: BrokerDecision,
     instruction_epoch: int = 1,
+    turn_grant: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Record a broker decision to the audit trail."""
     from .audit import record_decision, redact
@@ -365,17 +528,22 @@ def record_broker_decision(
         else:
             sanitized[k] = v
 
+    grant_id = decision.turn_grant_id or str((turn_grant or {}).get("turn_id", ""))
+    reasons = [decision.reason] + decision.details[:3]
+    if grant_id:
+        reasons.append(f"turn_grant_id={grant_id}")
+
     record_decision(
         repo_root,
         project_id="",  # filled from state if available
-        task_id="",
+        task_id=grant_id,
         agent="claude",
         original_command=f"{tool_name}: {json.dumps(sanitized, default=str)[:500]}",
         normalized_command=tool_name,
         classification=decision.classification,
-        policy_rule="broker",
+        policy_rule="turn_grant" if grant_id else "broker",
         decision="allow" if decision.allowed else "deny",
-        reasons=[decision.reason] + decision.details[:3],
+        reasons=reasons,
     )
 
 
@@ -437,12 +605,20 @@ def broker_from_stdin(repo_root: Optional[str] = None) -> int:
     except Exception:
         pass
 
+    # Turn-scoped owner grant, if the shell created one for this turn.
+    turn_grant = None
+    try:
+        turn_grant = turngrant_mod.active(repo_root)
+    except Exception:
+        pass
+
     # Classify
     decision = classify_tool_call(
         tool_name, tool_input, cwd, repo_root,
         policy=policy,
         autonomy_status=autonomy_status,
         instruction_epoch=instruction_epoch,
+        turn_grant=turn_grant,
     )
 
     # Record audit
@@ -450,6 +626,7 @@ def broker_from_stdin(repo_root: Optional[str] = None) -> int:
         record_broker_decision(
             repo_root, tool_name, tool_input, decision,
             instruction_epoch=instruction_epoch,
+            turn_grant=turn_grant,
         )
     except Exception:
         pass  # Audit failure must not block execution

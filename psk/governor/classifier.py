@@ -106,6 +106,12 @@ _TIER1_PATTERNS = [
 # Tier 0: read-only
 _TIER0_PATTERNS = [
     re.compile(r"\bgit\s+(status|diff|log|show|branch\s*$)\b"),
+    # Inspection-only plumbing. None of these match an earlier tier, so they
+    # would otherwise fall through to the conservative unknown-command default.
+    re.compile(r"\bgit\s+(rev-parse|describe|blame|shortlog|ls-files|"
+               r"ls-tree|cat-file|symbolic-ref|config\s+--get)\b"),
+    # `git remote` only in its read-only forms — never add/remove/set-url.
+    re.compile(r"\bgit\s+remote\s*(-v|--verbose|show\b|get-url\b)?\s*$"),
     re.compile(r"\b(cat|head|tail|less|more|wc|grep|rg|find|fd|ls|tree|pwd|echo)\b"),
 ]
 
