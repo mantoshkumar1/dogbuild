@@ -84,6 +84,7 @@ class EventType(str, enum.Enum):
     IDEA_PARKED = "idea_parked"
     REVIEW_REVISED = "review_revised"
     HUMAN_DECISION_RECORDED = "human_decision_recorded"
+    REVIEW_CONDITIONS_CLOSED = "review_conditions_closed"
 
 
 # Reserved human-only approvals — always require the human, never auto-performed.

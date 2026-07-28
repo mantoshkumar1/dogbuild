@@ -409,3 +409,56 @@ def revise(path: str, packet_id: str, new_evidence: str, actor: str = "claude") 
         machine_evidence=new_evidence,
         agent_claims="Revised after VETO with new machine-verifiable evidence.",
         revision_of=packet_id, actor=actor)
+
+
+# --------------------------------------------------------------------------- #
+# closing conditions
+# --------------------------------------------------------------------------- #
+def satisfy_conditions(path: str, packet_id: Optional[str] = None, *,
+                       note: str = "", actor: str = "human") -> dict:
+    """Mark the open conditions of an APPROVE_WITH_CONDITIONS decision satisfied.
+
+    Conditions were written with `status: "open"` at import and nothing could
+    ever close them, so a decision stayed permanently "conditional" even after
+    the work was done and evidenced. Closing is an owner act: the caller states
+    the evidence in *note*.
+
+    Existing text is never rewritten — each condition keeps its wording and
+    gains `satisfied_at` plus the closing note. Conditions already closed are
+    left alone.
+    """
+    root = gitutil.repo_root(path)
+    state = store.load_state(root)
+    rec = (state.reviews.get(packet_id) if packet_id else _latest_imported(state))
+    if not rec or rec.get("status") != "imported":
+        raise ValidationError("no imported decision whose conditions can be closed")
+    if rec.get("verdict") != "APPROVE_WITH_CONDITIONS":
+        raise ValidationError(
+            f"decision '{rec['packet_id']}' is {rec.get('verdict')}; it carries no conditions")
+
+    conditions = rec.get("conditions") or []
+    if not conditions:
+        raise ValidationError(f"decision '{rec['packet_id']}' records no conditions")
+
+    closed_at = now_iso()
+    closed = 0
+    for cond in conditions:
+        if not isinstance(cond, dict) or cond.get("status") != "open":
+            continue
+        cond["status"] = "satisfied"
+        cond["satisfied_at"] = closed_at
+        if note:
+            cond["satisfied_note"] = note
+        closed += 1
+
+    rec["conditions"] = conditions
+    rec["conditions_closed_at"] = closed_at
+    state.reviews[rec["packet_id"]] = rec
+    state.updated_at = closed_at
+    store.save_state(root, state)
+    store.append_event(root, _event(EventType.REVIEW_CONDITIONS_CLOSED, actor,
+                                    packet_id=rec["packet_id"], closed=closed))
+    return {"packet_id": rec["packet_id"], "closed": closed,
+            "remaining_open": sum(1 for c in conditions
+                                  if isinstance(c, dict) and c.get("status") == "open"),
+            "conditions": conditions}

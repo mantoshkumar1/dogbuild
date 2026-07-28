@@ -187,6 +187,14 @@ def _cmd_review_revise(args) -> int:
     return SUCCESS
 
 
+def _cmd_review_conditions(args) -> int:
+    res = review.satisfy_conditions(args.path, args.packet,
+                                    note=args.note, actor=args.actor)
+    _emit(f"Closed {res['closed']} condition(s) on {res['packet_id']} "
+          f"({res['remaining_open']} still open)", res, args.json)
+    return SUCCESS
+
+
 def _cmd_policy_show(args) -> int:
     _emit_json_or(policy_mod.show(args.path), args.json,
                   lambda p: f"{p['policy_id']} v{p['policy_version']} "
@@ -744,6 +752,19 @@ def _build_parser() -> argparse.ArgumentParser:
     rg.add_argument("--packet", default=None)
     rg.add_argument("--json", action="store_true")
     rg.set_defaults(func=_cmd_review_gate)
+
+    rc = rsub.add_parser("conditions",
+                         help="close the open conditions of an approved decision")
+    rc.add_argument("path", nargs="?", default=".")
+    rc.add_argument("--packet", default=None,
+                    help="packet id (default: the latest imported decision)")
+    rc.add_argument("--satisfy", action="store_true", required=True,
+                    help="mark the open conditions satisfied (owner act)")
+    rc.add_argument("--note", default="",
+                    help="the evidence that satisfies them")
+    rc.add_argument("--actor", default="human")
+    rc.add_argument("--json", action="store_true")
+    rc.set_defaults(func=_cmd_review_conditions)
 
     rrv = rsub.add_parser("revise", help="one new-evidence revision after a VETO")
     rrv.add_argument("packet")
