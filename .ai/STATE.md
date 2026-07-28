@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-28T03:42:48Z
+- **State updated:** 2026-07-28T03:57:14Z
 
 ## Objective
 
@@ -15,16 +15,16 @@ Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state s
 
 ## Active scope
 
-(v7, set 2026-07-25T21:59:04Z)
+(v8, set 2026-07-28T03:56:54Z)
 
-Reviewer policy + full exception handling slice
+Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone (revision 1) is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.
 
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `f0d6c712079a469d1dd1e00cfe020b233d3240b7`
+- **HEAD:** `b985dfb81f952ad6b1e5239425314af5fc8a9fc7`
 - **Worktree:** clean
-- **Captured:** 2026-07-28T03:42:48Z
+- **Captured:** 2026-07-28T03:57:14Z
 
 ## Requested items
 
@@ -232,5 +232,19 @@ Reviewer policy + full exception handling slice
 - Unresolved risks:
   - PhotoSahi's ledger still records git_state 5a160ca with 7 reviewer conditions open; the orientation no longer presents it as current, but the closeout itself is an owner decision and was not performed.
   - Turn-grant eligibility is a keyword classifier; a safe instruction phrased unusually will simply get no grant (fails closed, but the owner must rephrase).
+  - Automatic ChatGPT transport remains deferred; commercial demand and payment remain unvalidated.
+
+### 2026-07-28T03:57:14Z — Closeout slice approved by the owner and completed. PhotoSahi's ledger is reconciled to 0a36116 with all seven reviewer conditions closed and the owner-away autonomy milestone marked complete; DogBuild's own control-loop milestone is closed and the next milestone is real use plus one outside-user installation test.
+
+- Implemented:
+  - psk/review.py satisfy_conditions + `dogbuild review conditions --satisfy`: the missing half of the conditions feature — conditions could be opened but never closed
+  - new review_conditions_closed event type and schema entry
+  - PhotoSahi: recorded git state moved 5a160ca -> 0a36116; 7 reviewer conditions on ee557880 closed as satisfied; goal revision 3 marks the owner-away autonomy milestone COMPLETE; closeout checkpoint and declaration written; no product code changed
+  - DogBuild: goal revision 2 — control-loop milestone COMPLETE; next milestone is real use over several normal work sessions then one outside-user installation test
+  - Older records preserved as history throughout: prior goal revisions archived, earlier checkpoints intact, original decision packets untouched
+- Next safe action: Use DogBuild normally for real work across several sessions and record what breaks. Build no new feature until that evidence exists.
+- Unresolved risks:
+  - The review importer splits a wrapped condition across recorded lines; PhotoSahi's 7 conditions were stored as 10 entries. All are closed, so it is cosmetic today, but the parser should be fixed before the next reviewer round-trip.
+  - PhotoSahi's .ai/ is untracked by repo policy, so its reconciled ledger exists only on this machine.
   - Automatic ChatGPT transport remains deferred; commercial demand and payment remain unvalidated.
 

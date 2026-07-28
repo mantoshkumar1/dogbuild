@@ -1,18 +1,18 @@
 {
-  "actor_name": "claude",
+  "actor_name": "human",
   "actor_type": "ai_execution_agent",
-  "building": "Fixes for the three defects exposed by the real-terminal PhotoSahi acceptance",
-  "changed": "psk/governor/turngrant.py (new), psk/governor/broker.py, psk/governor/classifier.py, psk/brief.py, psk/shell.py, .gitignore, tests/test_turn_grant.py (new), tests/test_shell.py",
-  "claimed_head": "f0d6c712079a469d1dd1e00cfe020b233d3240b7",
-  "created_at": "2026-07-28T03:43:05Z",
+  "building": "Owner-approved closeout of the PhotoSahi ledger and of both milestones",
+  "changed": "psk/review.py, psk/models.py, psk/schemas/event.schema.json, psk/__main__.py, tests/test_reviewer_policy.py, .ai/ (DogBuild goal rev 2 + closeout checkpoint); PhotoSahi .ai/ only (goal rev 3, conditions closed, git state 0a36116, closeout checkpoint) — no PhotoSahi product code",
+  "claimed_head": "b985dfb81f952ad6b1e5239425314af5fc8a9fc7",
+  "created_at": "2026-07-28T03:57:14Z",
   "failed": "None",
   "goal_alignment": {
     "explanation": "",
     "goal_contract_revision": null,
     "status": "IN_SCOPE"
   },
-  "incomplete": "PhotoSahi ledger closeout (state.json still at 5a160ca with 7 open conditions) — an owner decision, deliberately not performed",
-  "next_action": "Await ChatGPT review of the three defect fixes; do not begin another slice, push, or publish",
+  "incomplete": "None for this slice",
+  "next_action": "Use DogBuild normally for real work across several sessions and record what breaks; build no new feature until that evidence exists",
   "role": "execution_agent",
-  "verified": "383/383 unit tests pass; PhotoSahi real acceptance ran the previously-denied instruction with npm run test:unit at 126 pass / 0 fail, no permission dialog, no PhotoSahi file changed, HEAD still 0a36116, audit rows under policy_rule=turn_grant, grant expired; real hook allows Skill(dogbuild) and denies arbitrary skills"
+  "verified": "390/390 unit tests pass; PhotoSahi brief reports head 0a36116, 0 pending conditions, milestone complete, no warnings; PhotoSahi worktree and HEAD unchanged"
 }

@@ -303,6 +303,40 @@
         "legacy-Markdown importer not built; authority gate is Day 10"
       ]
     },
+    "a4a9c0f0-fc3e-416f-8e22-f46de4aecbb0": {
+      "created_at": "2026-07-28T03:57:14Z",
+      "evidence_ids": [],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-28T03:57:14Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "b985dfb81f952ad6b1e5239425314af5fc8a9fc7"
+      },
+      "id": "a4a9c0f0-fc3e-416f-8e22-f46de4aecbb0",
+      "implemented": [
+        "psk/review.py satisfy_conditions + `dogbuild review conditions --satisfy`: the missing half of the conditions feature — conditions could be opened but never closed",
+        "new review_conditions_closed event type and schema entry",
+        "PhotoSahi: recorded git state moved 5a160ca -> 0a36116; 7 reviewer conditions on ee557880 closed as satisfied; goal revision 3 marks the owner-away autonomy milestone COMPLETE; closeout checkpoint and declaration written; no product code changed",
+        "DogBuild: goal revision 2 — control-loop milestone COMPLETE; next milestone is real use over several normal work sessions then one outside-user installation test",
+        "Older records preserved as history throughout: prior goal revisions archived, earlier checkpoints intact, original decision packets untouched"
+      ],
+      "next_safe_action": "Use DogBuild normally for real work across several sessions and record what breaks. Build no new feature until that evidence exists.",
+      "summary": "Closeout slice approved by the owner and completed. PhotoSahi's ledger is reconciled to 0a36116 with all seven reviewer conditions closed and the owner-away autonomy milestone marked complete; DogBuild's own control-loop milestone is closed and the next milestone is real use plus one outside-user installation test.",
+      "tested": [
+        "python3 -m unittest discover -s tests -t . = 390 pass / 0 fail (383 -> 390; 7 new)",
+        "PhotoSahi brief after closeout: recorded head 0a36116, pending conditions 0, milestone complete, no warnings, human decision needed no",
+        "PhotoSahi git status --porcelain unchanged (only pre-existing untracked .ai/), HEAD still 0a36116",
+        "npm run test:unit = 126 pass / 0 fail re-run live at 0a36116 during the acceptance turn"
+      ],
+      "unresolved_risks": [
+        "The review importer splits a wrapped condition across recorded lines; PhotoSahi's 7 conditions were stored as 10 entries. All are closed, so it is cosmetic today, but the parser should be fixed before the next reviewer round-trip.",
+        "PhotoSahi's .ai/ is untracked by repo policy, so its reconciled ledger exists only on this machine.",
+        "Automatic ChatGPT transport remains deferred; commercial demand and payment remain unvalidated."
+      ]
+    },
     "aa55fd0e-3f86-4af4-9648-e084ac07b2d9": {
       "created_at": "2026-07-25T22:21:44Z",
       "evidence_ids": [],
@@ -636,28 +670,26 @@
   "execution_plan": null,
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-28T03:42:48Z",
+    "captured_at": "2026-07-28T03:57:14Z",
     "detached": false,
     "dirty": false,
     "dirty_fingerprint": null,
-    "head_commit": "f0d6c712079a469d1dd1e00cfe020b233d3240b7"
+    "head_commit": "b985dfb81f952ad6b1e5239425314af5fc8a9fc7"
   },
   "goal_contract": {
     "acceptance_criteria": [
-      "The human can see where the project is in under 20 seconds.",
-      "A mature discussion can become an approved project contract.",
-      "Claude can continue without receiving the entire ChatGPT conversation.",
-      "Work remains bound to the active objective and milestone.",
-      "Optional ideas are parked rather than implemented.",
-      "The human is interrupted only when a real choice is required."
+      "DogBuild is used for real work across several ordinary sessions without the owner falling back to raw Claude Code",
+      "friction, breakage, and workarounds are recorded as they happen rather than reconstructed afterwards",
+      "one person other than the owner installs DogBuild from the repository and reaches a working dogBuild> prompt",
+      "the outside-user installation test is written up honestly, including whatever failed"
     ],
-    "approved_at": "2026-07-25T21:06:33Z",
+    "approved_at": "2026-07-28T03:56:54Z",
     "core_repository": "project-state-keeper",
-    "created_at": "2026-07-25T21:06:33Z",
-    "created_by": "chatgpt",
-    "current_milestone": "Complete one short, reliable local control loop using ChatGPT as reviewer and Claude as executor.",
+    "created_at": "2026-07-28T03:56:54Z",
+    "created_by": "owner",
+    "current_milestone": "Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone (revision 1) is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.",
     "desired_outcome": "Turn a mature AI discussion into an executable project contract, keep all agents aligned with it, verify repository evidence, and involve the human only for genuine exceptions.",
-    "exact_next_action": "Make the Goal Contract and Orientation Brief reliably reflect the current approved DogBuild purpose.",
+    "exact_next_action": "Use DogBuild normally for real work across several sessions and record what breaks or gets in the way. Build no new feature until that evidence exists.",
     "explicit_exclusions": [
       "automatic browser control",
       "OpenAI API integration",
@@ -667,24 +699,24 @@
       "marketplace packaging",
       "payments",
       "Cursor support",
-      "production deployment"
+      "production deployment",
+      "new features before the real-use evidence exists"
     ],
-    "fingerprint": "dd2196f8d18e088f557eee4868add3d084db8a33cf8e55bb78d56fc64f41f562",
-    "goal_id": "f3752b52-393f-4dac-ae69-c9f218fca1e3",
+    "fingerprint": "b66dd23e40b1b7d5844f46e832db45631362fd4c4c1eec18b889e9cf16d1ea39",
+    "goal_id": "b03ae1ca-b5a2-481d-b45d-3ed2734d895d",
     "human_approved": true,
     "human_only_decisions": [],
     "problem": "Solo developers lose project purpose, current state, decisions, and context while moving work between ChatGPT, Claude, Codex, and multiple repositories.",
     "product_name": "DogBuild",
     "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
     "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
-    "revision": 1,
+    "revision": 2,
     "target_user": "Solo developers who explore projects in ChatGPT and implement them with Claude Code or Codex.",
     "unresolved_assumptions": [
-      "external willingness to pay",
-      "final Lite versus Pro boundary",
-      "automatic cross-provider transport"
+      "that ordinary use will surface problems the built acceptance tests did not",
+      "that an outside user can install DogBuild without the owner present"
     ],
-    "why_now": "The founder experiences this repeatedly while building PhotoSahi and DogBuild itself and currently acts as messenger, historian, and coordinator between AI tools."
+    "why_now": "The local control loop is complete and proven on a real repository. What is unproven is whether it survives ordinary use and whether anyone else can install it."
   },
   "handoffs": {
     "baa8e579-593d-42f2-b00a-d99a38062c0c": {
@@ -773,7 +805,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "ec8417de-0a69-4479-8dbc-9080e9bca092",
+  "last_checkpoint_id": "a4a9c0f0-fc3e-416f-8e22-f46de4aecbb0",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -1081,11 +1113,11 @@
   },
   "schema_version": "1.0.0",
   "scope": {
-    "description": "Reviewer policy + full exception handling slice",
-    "goal_revision": null,
+    "description": "Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone (revision 1) is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.",
+    "goal_revision": 2,
     "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
-    "set_at": "2026-07-25T21:59:04Z",
-    "version": 7
+    "set_at": "2026-07-28T03:56:54Z",
+    "version": 8
   },
-  "updated_at": "2026-07-28T03:42:48Z"
+  "updated_at": "2026-07-28T03:57:14Z"
 }
