@@ -25,3 +25,4 @@ htmlcov/
 # DogBuild machine-local session pointer (not shared state)
 .ai/dogbuild_session.json
 .ai/turn_grant.json
+.ai/execution_audit.jsonl
