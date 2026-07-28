@@ -267,16 +267,40 @@ def _grant_decision_for_bash(
     command: str,
     grant: Dict[str, Any],
     policy: Optional[ExecutionPolicy],
+    repo_root: str,
 ) -> Optional[BrokerDecision]:
     """Decide a Bash command under a turn grant, or None to fall through.
 
     Returns an allow only for the grant's own action classes at tier 0–1.
-    Anything else is denied here rather than falling through, so a grant can
-    never be the reason a wider action slipped past.
+    An exact-commit grant additionally validates the live diff, paths, and
+    message. Anything else is denied here rather than falling through, so a
+    grant can never be the reason a wider action slipped past.
     """
     cls = classify_command(command.strip(), policy)
     tier = _tier_index(cls.tier)
     grant_id = str(grant.get("turn_id", ""))
+
+    if cls.action_class == turngrant_mod.COMMIT_ACTION_CLASS:
+        valid, validation_reasons = turngrant_mod.validate_commit_command(
+            repo_root, grant, command,
+        )
+        if not valid:
+            return BrokerDecision(
+                allowed=False,
+                reason="exact commit does not match the owner-approved grant",
+                classification=cls.action_class,
+                confidence=1.0,
+                details=[turngrant_mod.describe(grant), *validation_reasons],
+                turn_grant_id=grant_id,
+            )
+        return BrokerDecision(
+            allowed=True,
+            reason="turn-scoped owner grant: exact existing commit",
+            classification=cls.action_class,
+            confidence=1.0,
+            details=[turngrant_mod.describe(grant), *validation_reasons],
+            turn_grant_id=grant_id,
+        )
 
     if turngrant_mod.permits(grant, cls.action_class, tier):
         return BrokerDecision(
@@ -391,7 +415,7 @@ def classify_tool_call(
     This is the central broker function.  All permission decisions flow
     through here.  *turn_grant*, when present, is a turn-scoped owner grant
     (see `psk.governor.turngrant`) that authorizes read and existing-test
-    actions for one Claude turn — and nothing else.
+    actions, or one exact owner-approved commit, for one Claude turn.
     """
     decision = _classify_tool_inner(
         tool_name, tool_input, cwd, repo_root, policy,
@@ -435,9 +459,15 @@ def _classify_tool_inner(
     # ---- Write tools ----
     if tool_name in WRITE_TOOLS:
         if turn_grant and not turn_grant.get("write_allowed"):
+            grant_boundary = (
+                "the owner authorized committing only the already-existing "
+                "snapshotted diff; additional edits are not covered"
+                if turn_grant.get("commit_allowed")
+                else "the owner authorized one read-and-verify turn; edits are "
+                     "not covered by a turn-scoped grant"
+            )
             return _deny(
-                "the owner authorized one read-and-verify turn; edits are not "
-                "covered by a turn-scoped grant",
+                grant_boundary,
                 classification="turn_grant_denied",
             )
         path = tool_input.get("file_path", "")
@@ -477,7 +507,9 @@ def _classify_tool_inner(
         # direct owner instruction can authorize read + existing tests even
         # when autonomy is stopped and no execution policy is seeded.
         if turn_grant:
-            granted = _grant_decision_for_bash(command, turn_grant, policy)
+            granted = _grant_decision_for_bash(
+                command, turn_grant, policy, repo_root,
+            )
             if granted is not None:
                 return granted
 

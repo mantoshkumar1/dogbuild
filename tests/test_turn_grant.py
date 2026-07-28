@@ -26,6 +26,12 @@ ACCEPTANCE_INSTRUCTION = (
     "and make no changes."
 )
 
+EXACT_COMMIT_INSTRUCTION = """Approved. Commit exactly the existing README.md change.
+Do not make any additional edits.
+Commit message:
+docs: document the requirement
+Do not push, deploy, publish, or start another task."""
+
 
 class TestEligibility(unittest.TestCase):
 
@@ -170,6 +176,147 @@ class TestGrantLifecycle(GrantRepoCase):
         turngrant.expire(self.root, reason="turn complete")
         self.assertIsNone(turngrant.active(self.root))
         self.assertFalse(turngrant.grant_path(self.root).exists())
+
+
+class TestExactCommitGrant(GrantRepoCase):
+
+    def setUp(self):
+        super().setUp()
+        self.readme = Path(self.root, "README.md")
+        self.readme.write_text("changed\n", encoding="utf-8")
+
+    def create_grant(self):
+        return turngrant.create(self.root, EXACT_COMMIT_INSTRUCTION)
+
+    def test_exact_existing_commit_instruction_creates_narrow_grant(self):
+        grant = self.create_grant()
+        self.assertIsNotNone(grant)
+        self.assertTrue(grant["commit_allowed"])
+        self.assertFalse(grant["write_allowed"])
+        self.assertFalse(grant["network_allowed"])
+        self.assertEqual(grant["grant_kind"], "exact_existing_commit")
+        self.assertEqual(grant["allowed_commit_paths"], ["README.md"])
+        self.assertEqual(
+            grant["allowed_commit_message"],
+            "docs: document the requirement",
+        )
+        self.assertIn("git_commit", grant["allowed_action_classes"])
+
+    def test_commit_grant_requires_exact_existing_scope_and_message(self):
+        no_message = (
+            "Commit exactly the existing README.md change. "
+            "Do not push."
+        )
+        self.assertIsNone(turngrant.create(self.root, no_message))
+        vague_scope = """Commit the README.md change.
+Commit message:
+docs: x
+Do not push."""
+        self.assertIsNone(turngrant.create(self.root, vague_scope))
+
+    def test_short_natural_exact_commit_instruction_is_eligible(self):
+        instruction = """Commit exactly the existing README.md change.
+Commit message: docs: document the requirement"""
+        grant = turngrant.create(self.root, instruction)
+        self.assertIsNotNone(grant)
+        self.assertTrue(grant["commit_allowed"])
+
+    def test_commit_plus_outward_action_is_not_eligible(self):
+        instruction = """Commit exactly the existing README.md change and push it.
+Commit message: docs: document the requirement"""
+        self.assertIsNone(turngrant.create(self.root, instruction))
+
+    def test_commit_grant_ignores_untracked_but_rejects_staged_state(self):
+        Path(self.root, "new.txt").write_text("x\n", encoding="utf-8")
+        grant = self.create_grant()
+        self.assertIsNotNone(grant)
+        self.assertEqual(grant["allowed_commit_paths"], ["README.md"])
+        turngrant.expire(self.root)
+        Path(self.root, "new.txt").unlink()
+        git(self.root, "add", "README.md")
+        self.assertIsNone(self.create_grant())
+
+    def test_exact_commit_command_is_allowed(self):
+        grant = self.create_grant()
+        decision = broker.classify_tool_call(
+            "Bash",
+            {
+                "command": (
+                    "git commit README.md "
+                    "-m 'docs: document the requirement'"
+                )
+            },
+            self.root,
+            self.root,
+            policy=None,
+            turn_grant=grant,
+        )
+        self.assertTrue(decision.allowed, decision.reason)
+        self.assertEqual(decision.classification, "git_commit")
+        self.assertIn("exact existing commit", decision.reason)
+
+    def test_commit_message_path_and_options_must_match(self):
+        grant = self.create_grant()
+        commands = [
+            "git commit README.md -m 'different message'",
+            "git commit other.md -m 'docs: document the requirement'",
+            "git commit -a -m 'docs: document the requirement'",
+            "git commit --amend README.md -m 'docs: document the requirement'",
+            (
+                "git commit README.md -m 'docs: document the requirement' "
+                "&& git push"
+            ),
+        ]
+        for command in commands:
+            decision = broker.classify_tool_call(
+                "Bash", {"command": command}, self.root, self.root,
+                policy=None, turn_grant=grant,
+            )
+            self.assertFalse(decision.allowed, command)
+
+    def test_commit_grant_is_invalid_if_diff_changes(self):
+        grant = self.create_grant()
+        self.readme.write_text("changed again\n", encoding="utf-8")
+        decision = broker.classify_tool_call(
+            "Bash",
+            {
+                "command": (
+                    "git commit README.md "
+                    "-m 'docs: document the requirement'"
+                )
+            },
+            self.root,
+            self.root,
+            policy=None,
+            turn_grant=grant,
+        )
+        self.assertFalse(decision.allowed)
+        self.assertTrue(
+            any("diff changed" in detail for detail in decision.details),
+            decision.details,
+        )
+
+    def test_commit_grant_still_denies_edits_staging_and_push(self):
+        grant = self.create_grant()
+        edit = broker.classify_tool_call(
+            "Edit",
+            {
+                "file_path": str(self.readme),
+                "old_string": "a",
+                "new_string": "b",
+            },
+            self.root,
+            self.root,
+            policy=None,
+            turn_grant=grant,
+        )
+        self.assertFalse(edit.allowed)
+        for command in ("git add README.md", "git push origin main"):
+            decision = broker.classify_tool_call(
+                "Bash", {"command": command}, self.root, self.root,
+                policy=None, turn_grant=grant,
+            )
+            self.assertFalse(decision.allowed, command)
 
 
 class TestGrantExpiresAfterOneTurn(GrantRepoCase):

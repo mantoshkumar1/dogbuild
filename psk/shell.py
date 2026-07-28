@@ -487,7 +487,9 @@ class DogBuildShell:
             f"Next step: {self.fields.get('next_step', self.fields.get('exact_next_action', ''))}\n"
             "If earlier conversation memory conflicts with this block or with "
             "fresh repository inspection, ignore the older claim. Do not present "
-            "older commit, test, or task details as current.\n"
+            "older commit, test, or task details as current. If a tool call is "
+            "denied, do not retry the identical action unless the owner or the "
+            "machine-enforced authorization has changed.\n"
             "[Owner request]\n"
             f"{owner_message}"
         )
@@ -646,10 +648,18 @@ class DogBuildShell:
         except Exception:
             return None
         if grant:
-            self.say(
-                "  Owner authorization for this turn: read the repository and "
-                "run existing tests. No edits, commits, installs, or network."
-            )
+            if grant.get("commit_allowed"):
+                paths = ", ".join(grant.get("allowed_commit_paths") or [])
+                self.say(
+                    "  Owner authorization for this turn: inspect and commit "
+                    f"only the existing change to {paths}. No edits, installs, "
+                    "push, deploy, publish, or network."
+                )
+            else:
+                self.say(
+                    "  Owner authorization for this turn: read the repository "
+                    "and run existing tests. No edits, commits, installs, or network."
+                )
         return grant
 
     def _close_turn_grant(self, grant: Optional[dict]) -> None:

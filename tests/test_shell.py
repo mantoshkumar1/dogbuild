@@ -313,6 +313,7 @@ class TestClaudeTurns(ShellRepoCase):
         self.assertIn("[Owner request]", message)
         self.assertIn("Inspect Git status and make no changes.", message)
         self.assertIn("ignore the older claim", message)
+        self.assertIn("do not retry the identical action", message)
 
     def test_session_pointer_is_written_after_a_turn(self):
         claude = FakeClaude()
