@@ -19,6 +19,6 @@ validated business. **All of the following are UNVALIDATED.**
   `revenue-opportunity-lab/research-standards.md`.
 - Until the commercial gate in
   [`success-and-kill-criteria.md`](success-and-kill-criteria.md) is passed with
-  real evidence, Project State Keeper is a **personal tool**, not a product.
+  real evidence, DogBuild is a **personal tool**, not a validated business.
 - Building continues **only** because the founder needs the tool. That is the
   whole justification, and it is enough — for a tool, not for a business.

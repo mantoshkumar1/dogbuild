@@ -683,11 +683,11 @@
       "one person other than the owner installs DogBuild from the repository and reaches a working dogBuild> prompt",
       "the outside-user installation test is written up honestly, including whatever failed"
     ],
-    "approved_at": "2026-07-28T03:56:54Z",
-    "core_repository": "project-state-keeper",
-    "created_at": "2026-07-28T03:56:54Z",
-    "created_by": "owner",
-    "current_milestone": "Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone (revision 1) is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.",
+    "approved_at": "2026-07-28T05:38:13Z",
+    "core_repository": "dogbuild",
+    "created_at": "2026-07-28T05:38:46Z",
+    "created_by": "codex",
+    "current_milestone": "Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.",
     "desired_outcome": "Turn a mature AI discussion into an executable project contract, keep all agents aligned with it, verify repository evidence, and involve the human only for genuine exceptions.",
     "exact_next_action": "Use DogBuild normally for real work across several sessions and record what breaks or gets in the way. Build no new feature until that evidence exists.",
     "explicit_exclusions": [
@@ -702,21 +702,21 @@
       "production deployment",
       "new features before the real-use evidence exists"
     ],
-    "fingerprint": "b66dd23e40b1b7d5844f46e832db45631362fd4c4c1eec18b889e9cf16d1ea39",
-    "goal_id": "b03ae1ca-b5a2-481d-b45d-3ed2734d895d",
+    "fingerprint": "bf759e1079cf52320436d71b2608748c5f90aa10d5ee3ee1dc097c037e025263",
+    "goal_id": "e1831fa2-ed8f-4a31-8a2f-7b09f101d20a",
     "human_approved": true,
     "human_only_decisions": [],
     "problem": "Solo developers lose project purpose, current state, decisions, and context while moving work between ChatGPT, Claude, Codex, and multiple repositories.",
     "product_name": "DogBuild",
     "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
     "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
-    "revision": 2,
+    "revision": 3,
     "target_user": "Solo developers who explore projects in ChatGPT and implement them with Claude Code or Codex.",
     "unresolved_assumptions": [
       "that ordinary use will surface problems the built acceptance tests did not",
       "that an outside user can install DogBuild without the owner present"
     ],
-    "why_now": "The local control loop is complete and proven on a real repository. What is unproven is whether it survives ordinary use and whether anyone else can install it."
+    "why_now": "The owner renamed the repository to match the established DogBuild product and command before outside-user testing."
   },
   "handoffs": {
     "baa8e579-593d-42f2-b00a-d99a38062c0c": {
@@ -746,7 +746,7 @@
     "created_at": "2026-07-25T18:26:36Z",
     "psk_uuid": "e29a3a07-7a2c-4f9d-a44c-127e30fd89be",
     "remotes": [],
-    "root": "/Users/mantoshkumar/Desktop/project/project-state-keeper"
+    "root": "/Users/mantoshkumar/Desktop/project/dogbuild"
   },
   "items": {
     "3d9cf933-3272-4df8-b0b9-7f6bf4f894d0": {
@@ -1113,11 +1113,11 @@
   },
   "schema_version": "1.0.0",
   "scope": {
-    "description": "Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone (revision 1) is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.",
-    "goal_revision": 2,
+    "description": "Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.",
+    "goal_revision": 3,
     "scope_id": "5f570319-096b-4125-9eae-7057edf78376",
-    "set_at": "2026-07-28T03:56:54Z",
-    "version": 8
+    "set_at": "2026-07-28T05:38:46Z",
+    "version": 9
   },
-  "updated_at": "2026-07-28T03:57:14Z"
+  "updated_at": "2026-07-28T05:38:46Z"
 }

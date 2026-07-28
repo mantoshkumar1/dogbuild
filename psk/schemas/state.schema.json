@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://project-state-keeper/schemas/state.schema.json",
-  "title": "Project State Keeper — canonical state",
+  "title": "DogBuild Project State Keeper — canonical state",
   "type": "object",
   "required": ["schema_version", "identity", "git_state", "reserved_approvals", "updated_at"],
   "properties": {

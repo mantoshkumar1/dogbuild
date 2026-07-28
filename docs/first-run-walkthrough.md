@@ -19,9 +19,9 @@ so it runs fully offline with no reviewer in the loop. See
 ## Install (isolated virtual environment)
 
 ```bash
-# from anywhere; point pip at your local Project State Keeper checkout
+# from anywhere; point pip at your local DogBuild checkout
 python3 -m venv .venv && . .venv/bin/activate
-pip install /path/to/project-state-keeper
+pip install /path/to/dogbuild
 statekeeper --version
 ```
 
@@ -118,7 +118,7 @@ not by you. To use one instead of the fixture:
    `.ai/exchange/outbox/<packet-id>-chatgpt-review.md`.
 2. Give that packet to the reviewer:
    - **ChatGPT Web / desktop:** upload the file and say “Review the attached
-     Project State Keeper packet.” Copy ChatGPT’s reply — it already follows the
+     DogBuild packet.” Copy ChatGPT’s reply — it already follows the
      required `review_decision` format — into a local file.
    - **A future supported API transport:** the same packet in, the same
      `review_decision` out; only the courier changes.

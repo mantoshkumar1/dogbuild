@@ -1,11 +1,12 @@
 {
   "aliases": [
     "PSK",
+    "dogbuild",
     "project state keeper",
     "statekeeper"
   ],
   "created_at": "2026-07-25T19:53:41Z",
-  "display_name": "Project State Keeper",
+  "display_name": "DogBuild",
   "parent_system": {
     "name": "Revenue Opportunity Lab",
     "record": "~/Desktop/project/revenue-opportunity-lab/projects/project-state-keeper.md"
@@ -13,8 +14,8 @@
   "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
   "remote_fingerprint": null,
   "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
-  "repository_name": "project-state-keeper",
-  "root_path": "/Users/mantoshkumar/Desktop/project/project-state-keeper",
+  "repository_name": "dogbuild",
+  "root_path": "/Users/mantoshkumar/Desktop/project/dogbuild",
   "schema_version": 1,
-  "updated_at": "2026-07-25T19:53:41Z"
+  "updated_at": "2026-07-28T05:38:13Z"
 }

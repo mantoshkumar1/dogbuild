@@ -19,6 +19,8 @@ class TestInstallAndSkill(unittest.TestCase):
     # --- command compatibility ------------------------------------------- #
     def test_scripts_declare_dogbuild_and_statekeeper(self):
         pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('name = "dogbuild"', pyproject)
+        self.assertNotIn('name = "project-state-keeper"', pyproject)
         for line in ['statekeeper = "psk.__main__:main"',
                      'dogbuild = "psk.__main__:main"',
                      'psk = "psk.__main__:main"']:

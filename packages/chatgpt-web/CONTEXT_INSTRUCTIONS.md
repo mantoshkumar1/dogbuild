@@ -1,10 +1,10 @@
 # ChatGPT Web — context instructions (manual MVP)
 
-Paste/attach this alongside a Project State Keeper packet. **ChatGPT Web cannot
+Paste/attach this alongside a DogBuild packet. **ChatGPT Web cannot
 inspect** the local working directory, open browser windows, the local project
 registry, or Claude/Cursor state. It knows only what the uploaded packet contains.
 
-The standard request stays: **"Review the attached Project State Keeper packet."**
+The standard request stays: **"Review the attached DogBuild packet."**
 The user should not have to restate the repository manually.
 
 ## ChatGPT must:

@@ -1,5 +1,9 @@
 # PAUSE CHECKPOINT — Project State Keeper
 
+> Historical checkpoint. The owner superseded its naming instruction on
+> 2026-07-28: the product and repository are now **DogBuild**; `psk` remains the
+> internal Project State Keeper subsystem and compatibility package.
+
 Implementation is **temporarily paused** to preserve and strengthen the parent
 governance system (Revenue Opportunity Lab) before continuing. This file makes it
 possible to resume **without reconstructing the originating conversation.**

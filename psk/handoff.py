@@ -79,10 +79,10 @@ def create(path: str, *, to_agent: str, task: str, from_agent: str = "claude",
     last_cp = state.checkpoints.get(state.last_checkpoint_id) if state.last_checkpoint_id else None
     verified = "; ".join(last_cp.tested) if last_cp and last_cp.tested else "see latest checkpoint"
 
-    md = f"""# Project State Keeper — agent handoff
+    md = f"""# DogBuild — agent handoff
 
 > The instruction below originated from the **delegated reviewer AI (ChatGPT)** and
-> was transported through Project State Keeper. The receiving agent ({to_agent})
+> was transported through DogBuild's Project State Keeper subsystem. The receiving agent ({to_agent})
 > **must verify this repository** (identity, branch, HEAD, scope, freshness) before
 > acting. This packet contains no repository source code.
 

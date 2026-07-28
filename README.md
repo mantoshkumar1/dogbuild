@@ -1,6 +1,6 @@
-# Project State Keeper
+# DogBuild
 
-A local, file-based **communication and authority layer** between coding agents
+A local, file-based **project interface and authority layer** between coding agents
 (Claude Code, Cursor, Codex) with **ChatGPT** as the delegated reviewer and the
 **human owner** in ultimate authority. It keeps every agent operating from **one
 verified project state**, routes routine decisions through a deterministic
@@ -15,8 +15,9 @@ authority gate, and interrupts the human only on real exceptions.
 - **Framing:** built because the founder already needs it. Selling it is a
   **hypothesis to test later** — payment, demand, pricing, and distribution are
   **explicitly unvalidated** (see [`docs/commercial-assumptions.md`](docs/commercial-assumptions.md)).
-- Product source of truth: the spec in `revenue-opportunity-lab`
-  (`ideas/active/project-state-keeper.md`), refined by the docs here.
+- Product source of truth: the existing DogBuild record in
+  `revenue-opportunity-lab` (`ideas/active/project-state-keeper.md`), refined by
+  the docs here. The Lab filename retains its historical slug.
 
 ## Quickstart
 

@@ -4,8 +4,8 @@
 
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
-- **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-28T03:57:14Z
+- **Repo root:** `/Users/mantoshkumar/Desktop/project/dogbuild`
+- **State updated:** 2026-07-28T05:38:46Z
 
 ## Objective
 
@@ -15,9 +15,9 @@ Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state s
 
 ## Active scope
 
-(v8, set 2026-07-28T03:56:54Z)
+(v9, set 2026-07-28T05:38:46Z)
 
-Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone (revision 1) is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.
+Real use over several normal work sessions, then one outside-user installation test. The local control loop milestone is COMPLETE, proven end to end on PhotoSahi and closed on 2026-07-27.
 
 ## Git state (as last captured)
 

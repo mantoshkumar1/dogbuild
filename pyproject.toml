@@ -3,9 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "project-state-keeper"
+name = "dogbuild"
 version = "0.0.0"
-description = "Local, file-based communication and authority layer between coding agents."
+description = "Local, governed project interface for coordinating coding agents."
 readme = "README.md"
 requires-python = ">=3.9"
 # Runtime: standard library only (zero third-party runtime dependencies) by design.

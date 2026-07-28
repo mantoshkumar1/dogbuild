@@ -19,7 +19,7 @@ A deterministic, local, file-based CLI implementing one canonical protocol:
 9. **Deterministic authority gate** — APPROVE / APPROVE_WITH_CONDITIONS / VETO /
    NEEDS_HUMAN, enforced by rules, not judgment.
 10. **Thin Claude / Cursor / Codex adapters** — over the one canonical protocol.
-11. **Dogfooding** — in PhotoSahi and in Project State Keeper itself.
+11. **Dogfooding** — in PhotoSahi and in DogBuild itself.
 
 ## Out of scope (hard boundaries — do not add)
 - ❌ OpenAI API / any automated ChatGPT call

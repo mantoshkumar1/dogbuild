@@ -10,7 +10,7 @@ GENESIS = """```yaml
 schema_version: 1
 packet_type: project_genesis
 project_name: DogBuild
-core_repository: project-state-keeper
+core_repository: dogbuild
 problem: Solo devs lose project purpose and context across ChatGPT, Claude, Codex, and repos.
 target_user: Solo developers who explore in ChatGPT and build with Claude or Codex.
 desired_outcome: Turn a mature discussion into an executable contract and keep agents aligned.

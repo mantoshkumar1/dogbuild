@@ -35,7 +35,7 @@ def cleanup(path: str) -> None:
 MIN_GENESIS = """schema_version: 1
 packet_type: project_genesis
 project_name: DogBuild
-core_repository: project-state-keeper
+core_repository: dogbuild
 problem: solo devs lose context across AI tools and repos
 target_user: solo developers using ChatGPT + Claude/Codex
 desired_outcome: keep agents aligned to an approved contract
@@ -86,4 +86,3 @@ def build_review_decision(rec, ident, pol, goal, *, decision="APPROVE",
     yaml = "\n".join(f"{k}: {v}" for k, v in fields.items())
     return (f"```yaml\n{yaml}\n```\n\n## Decision\n{decision}\n\n## Rationale\nok\n\n"
             f"## Conditions\n{conditions_block}\n\n## Required next action\n{rec['action']}\n")
-

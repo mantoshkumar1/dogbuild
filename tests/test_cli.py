@@ -98,7 +98,11 @@ class TestCLI(unittest.TestCase):
                          "--evidence", "tests pass; scope set",
                          "--json"])
         self.assertEqual(code, exit_codes.SUCCESS)
-        self.assertTrue(os.path.exists(json.loads(out)["packet"]))
+        packet = json.loads(out)["packet"]
+        self.assertTrue(os.path.exists(packet))
+        with open(packet, encoding="utf-8") as fh:
+            text = fh.read().replace("\n> ", " ")
+        self.assertIn("Review the attached DogBuild packet.", text)
 
 
 if __name__ == "__main__":

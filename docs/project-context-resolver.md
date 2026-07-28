@@ -19,9 +19,9 @@ Every initialized repository has a persistent identity file:
 {
   "schema_version": 1,
   "project_id": "persistent-uuid",
-  "display_name": "Project State Keeper",
+  "display_name": "DogBuild",
   "repository_id": "persistent-repository-uuid",
-  "repository_name": "project-state-keeper",
+  "repository_name": "dogbuild",
   "root_path": "/current/local/path",
   "remote_fingerprint": null,
   "aliases": ["PSK", "statekeeper", "project state keeper"],
@@ -88,9 +88,9 @@ statekeeper context verify <file>     # (reserved) verify an imported context/de
 
 `context show` prints:
 ```
-Project: Project State Keeper
+Project: DogBuild
 Project ID: <uuid>
-Repository: project-state-keeper
+Repository: dogbuild
 Branch: main
 HEAD: <sha>
 Scope: Day 2 CLI skeleton
@@ -111,8 +111,8 @@ Every generated ChatGPT review packet must include a visible header:
 ```yaml
 project_id: <uuid>
 repository_id: <uuid>
-project_name: Project State Keeper
-repository_name: project-state-keeper
+project_name: DogBuild
+repository_name: dogbuild
 branch: main
 head: <full-sha>
 scope_id: <uuid>

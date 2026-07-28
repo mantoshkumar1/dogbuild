@@ -12,7 +12,7 @@ Output exactly this YAML (fill every field; use `[]` for empty lists):
 schema_version: 1
 packet_type: project_genesis
 project_name: DogBuild
-core_repository: project-state-keeper
+core_repository: dogbuild
 problem: <the specific problem, one sentence>
 target_user: <the specific user>
 desired_outcome: <what success looks like>
@@ -34,7 +34,7 @@ human_approved: true
 Rules:
 - Keep it short and honest — a contract, not a pitch.
 - Do not include commercial claims; demand/payment/distribution stay unvalidated.
-- `human_approved: true` means the human has explicitly agreed. Project State Keeper
+- `human_approved: true` means the human has explicitly agreed. DogBuild
   will **refuse to import** a packet that is not `human_approved: true`.
 - The user saves this to a file and runs: `statekeeper genesis import <file>`.
 - Do not attempt to read the local repository or transport the file yourself — the

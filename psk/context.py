@@ -118,9 +118,9 @@ def export_context_packet(path: str, *, purpose: str = "") -> Path:
     out_path = out_dir / f"{packet_id}-chat-context.md"
 
     lines = [
-        "# Project State Keeper — chat context packet\n",
-        "\n> Upload this to ChatGPT with: \"Review the attached Project State "
-        "Keeper packet.\" It is safe to upload — it contains no repository "
+        "# DogBuild — chat context packet\n",
+        "\n> Upload this to ChatGPT with: \"Review the attached DogBuild "
+        "packet.\" It is safe to upload — it contains no repository "
         "source.\n\n",
         "```yaml\n",
         f"packet_id: {packet_id}\n",

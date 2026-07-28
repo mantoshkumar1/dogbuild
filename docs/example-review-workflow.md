@@ -1,6 +1,6 @@
 # Example: the manual ChatGPT review workflow
 
-A concise, worked example of one complete Project State Keeper review round-trip:
+A concise, worked example of one complete DogBuild review round-trip:
 
 ```text
 request → upload → decision → import → gate → action → checkpoint
@@ -63,7 +63,7 @@ context.
 ## Worked values from the real Day 3 acceptance run
 ```text
 packet_id:  84e83faf-8c83-4961-a695-38b8804e0859
-project:    Project State Keeper
+project:    DogBuild
 branch:     main
 head:       e8986fe796cd12bd17d5d171cfd04fe45bcda4ba
 scope:      5f570319-… (revision 3)

@@ -84,6 +84,7 @@ class TestHandoff(Base):
                                       task=f"do work for {target}")
             self.assertTrue(out.exists())
             text = out.read_text(encoding="utf-8")
+            self.assertIn("# DogBuild — agent handoff", text)
             self.assertIn("contains no repository source code", text)
             self.assertNotIn("import argparse", text)  # no source leaked
             self.assertIn("push, merge", text)         # reserved human-only actions

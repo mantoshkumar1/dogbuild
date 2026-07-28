@@ -154,7 +154,7 @@ def _cmd_review_request(args) -> int:
         machine_evidence=args.evidence or "", uncertainty=args.uncertainty or "",
     )
     _emit(f"Wrote review request packet: {out}\nUpload it to ChatGPT with: "
-          f"\"Review the attached Project State Keeper packet.\"",
+          f"\"Review the attached DogBuild packet.\"",
           {"packet": str(out)}, args.json)
     return SUCCESS
 
@@ -653,9 +653,8 @@ def _cmd_governor_test(args) -> int:
 # parser
 # --------------------------------------------------------------------------- #
 def _build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="statekeeper",
-                                description="Project State Keeper — local CLI")
-    p.add_argument("--version", action="version", version=f"statekeeper {__version__}")
+    p = argparse.ArgumentParser(description="DogBuild — local governed project interface")
+    p.add_argument("--version", action="version", version=f"DogBuild {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     # start: branded launcher (launches Claude Code with DogBuild context)

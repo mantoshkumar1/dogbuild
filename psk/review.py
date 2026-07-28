@@ -190,7 +190,7 @@ None
 
 > Review under reviewer policy `{pol['policy_id']}` v{pol['policy_version']}. Judge
 > evidence against the Goal Contract, not tone. Upload with: "Review the attached
-> Project State Keeper packet." No repository source code included.
+> DogBuild packet." No repository source code included.
 
 ```yaml
 packet_type: review_request

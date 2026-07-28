@@ -21,7 +21,7 @@ thin adapters. No pushing/publishing without human approval.
 | 14 | **Packaging + commercial launch assets**; evaluate success/kill criteria | installable CLI/skill; go/park decision |
 
 ## Self-recording (from Day ~4, once state exists)
-At the end of each meaningful stage, use Project State Keeper itself to record:
+At the end of each meaningful stage, use DogBuild itself to record:
 what was implemented; what was tested; failures and resolutions; current git
 state; unresolved risks; the exact next safe action. This is both bootstrapping
 and the first real dogfood.

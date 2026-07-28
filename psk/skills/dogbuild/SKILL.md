@@ -2,7 +2,7 @@
 name: dogbuild
 description: >-
   Use in any repository that contains DogBuild state (a `.ai/` directory managed
-  by Project State Keeper / the `dogbuild` CLI). At session start, orient from
+  by DogBuild / the Project State Keeper subsystem). At session start, orient from
   live repository evidence and persistent DogBuild state. When the user asks what
   is happening, where things stand, what remains, or whether tests passed, treat
   it as a STATE_QUERY and answer in short plain English — never in tool jargon.

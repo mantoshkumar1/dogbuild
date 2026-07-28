@@ -96,6 +96,8 @@ class TestContext(unittest.TestCase):
         self.assertTrue(out.exists())
         text = out.read_text(encoding="utf-8")
         card = context.context_card(root)
+        self.assertIn("# DogBuild — chat context packet", text)
+        self.assertIn("Review the attached DogBuild packet.", text)
         self.assertIn(card["project_id"], text)
         self.assertIn("Day 2 review", text)
 
