@@ -100,12 +100,19 @@ _TIER1_PATTERNS = [
     re.compile(r"\bnpm\s+run\s+build\b"),
     re.compile(r"\bgit\s+commit\b"),
     re.compile(r"\bgit\s+add\b"),
-    re.compile(r"\bgit\s+branch\s+(?!-[dD])"),
+    # A non-option argument creates a branch. Read-only option forms such as
+    # `git branch -vv` are handled explicitly in Tier 0 below.
+    re.compile(r"\bgit\s+branch\s+(?!-)\S+"),
 ]
 
 # Tier 0: read-only
 _TIER0_PATTERNS = [
     re.compile(r"\bgit\s+(status|diff|log|show|branch\s*$)\b"),
+    re.compile(
+        r"\bgit\s+branch"
+        r"(?:\s+(?:-a|-r|-v|-vv|--all|--remotes|--verbose|--list|"
+        r"--show-current|--no-color|--color(?:=(?:always|never|auto))?))*\s*$"
+    ),
     # Inspection-only plumbing. None of these match an earlier tier, so they
     # would otherwise fall through to the conservative unknown-command default.
     re.compile(r"\bgit\s+(rev-parse|describe|blame|shortlog|ls-files|"

@@ -136,6 +136,25 @@ class TestBanner(ShellRepoCase):
         line = [l for l in banner.splitlines() if "Human needed:" in l][0]
         self.assertTrue("Yes" in line or "No" in line, line)
 
+    def test_banner_hides_historical_warnings_by_default(self):
+        fields, _ = shell.load_live(self.root)
+        banner = shell.render_banner(
+            fields,
+            ["The latest agent declaration references an older HEAD."],
+        )
+        self.assertNotIn("Warning:", banner)
+
+    def test_banner_keeps_actionable_warnings(self):
+        fields, _ = shell.load_live(self.root)
+        banner = shell.render_banner(fields, ["could not read DogBuild state"])
+        self.assertIn("Warning: could not read DogBuild state", banner)
+
+    def test_banner_shows_no_active_milestone_plainly(self):
+        fields, _ = shell.load_live(self.root)
+        fields["milestone_status"] = "pending-next-milestone"
+        banner = shell.render_banner(fields, [])
+        self.assertIn("Current milestone:  None — no task selected", banner)
+
     def test_stage_is_derived_from_live_state(self):
         fields, _ = shell.load_live(self.root)
         self.assertIn(fields["product"], shell.derive_stage(fields))
@@ -278,6 +297,22 @@ class TestClaudeTurns(ShellRepoCase):
         text = "\n".join(out)
         self.assertIn("I inspected the repo.", text)
         self.assertEqual(out.count(shell.PROMPT_STRING), 2)
+
+    def test_every_claude_turn_gets_fresh_authoritative_context(self):
+        claude = FakeClaude()
+        sh, _ = self.make_shell(
+            claude=claude,
+            lines=["Inspect Git status and make no changes.", "exit"],
+        )
+        sh.run()
+        self.assertEqual(len(claude.sent), 1)
+        message = claude.sent[0]
+        fields, _ = shell.load_live(self.root)
+        self.assertIn("[DogBuild live context — authoritative for this turn]", message)
+        self.assertIn(fields["current_verified_state"], message)
+        self.assertIn("[Owner request]", message)
+        self.assertIn("Inspect Git status and make no changes.", message)
+        self.assertIn("ignore the older claim", message)
 
     def test_session_pointer_is_written_after_a_turn(self):
         claude = FakeClaude()

@@ -169,6 +169,16 @@ class TestCommandClassification(unittest.TestCase):
         c = classify_command("git status")
         self.assertEqual(c.tier, RiskTier.TIER_0_READ_ONLY)
 
+    def test_tier0_git_branch_verbose_is_inspection(self):
+        c = classify_command("git branch -vv")
+        self.assertEqual(c.tier, RiskTier.TIER_0_READ_ONLY)
+        self.assertEqual(c.action_class, "repository_read")
+
+    def test_tier1_git_branch_name_creates_branch(self):
+        c = classify_command("git branch feature-name")
+        self.assertEqual(c.tier, RiskTier.TIER_1_REVERSIBLE)
+        self.assertEqual(c.action_class, "branch_create")
+
     def test_tier0_cat_file(self):
         c = classify_command("cat README.md")
         self.assertEqual(c.tier, RiskTier.TIER_0_READ_ONLY)

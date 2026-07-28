@@ -603,8 +603,9 @@ class TestShellStatusUsesCurrentEvidence(GrantRepoCase):
         self.new_commit()
         fields, warnings = shell.load_live(self.root)
         answer = shell.answer_state_query(fields, warnings, "status")
-        self.assertNotIn("100 pass", answer.split("Earlier, for history")[0])
-        self.assertIn("history", answer)
+        self.assertNotIn("100 pass", answer)
+        self.assertNotIn("Earlier, for history", answer)
+        self.assertNotIn("Warning:", answer)
 
     def test_tests_answer_is_honest_when_nothing_is_recorded(self):
         core.create_checkpoint(self.root, "old work",

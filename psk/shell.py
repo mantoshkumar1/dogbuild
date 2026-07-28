@@ -68,11 +68,29 @@ def _yesno(value: Any) -> str:
     return "Yes" if str(value).strip().lower() in ("yes", "true", "1") else "No"
 
 
+_HISTORICAL_WARNING_PREFIXES = (
+    "A past reviewer decision is for an older state",
+    "The latest agent declaration references an older HEAD",
+    "The last checkpoint was recorded at ",
+)
+
+
+def _visible_warnings(warnings: Optional[List[str]]) -> List[str]:
+    """Hide routine history notices while preserving actionable failures."""
+    return [
+        warning
+        for warning in (warnings or [])
+        if not warning.startswith(_HISTORICAL_WARNING_PREFIXES)
+    ]
+
+
 def render_banner(fields: dict, warnings: Optional[List[str]] = None) -> str:
     """Render the branded DogBuild session banner shown above the first prompt."""
-    warnings = warnings or []
     human = _yesno(fields.get("human_decision_needed"))
     reason = fields.get("human_decision_reason") or ""
+    milestone = fields.get("current_milestone", "(not set)")
+    if fields.get("milestone_status") == "pending-next-milestone":
+        milestone = "None — no task selected"
 
     lines = [
         "",
@@ -80,14 +98,15 @@ def render_banner(fields: dict, warnings: Optional[List[str]] = None) -> str:
         "",
         f"  Project:            {fields.get('product', '(unknown)')}",
         f"  Stage:              {derive_stage(fields)}",
-        f"  Current milestone:  {fields.get('current_milestone', '(not set)')}",
+        f"  Current milestone:  {milestone}",
         f"  Last verified:      {fields.get('current_verified_state', '(unknown)')}",
         f"  Human needed:       {human}" + (f" — {reason}" if human == "Yes" and reason else ""),
         "",
     ]
-    for w in warnings:
-        lines.append(f"  Warning: {w}")
-    if warnings:
+    visible_warnings = _visible_warnings(warnings)
+    for warning in visible_warnings:
+        lines.append(f"  Warning: {warning}")
+    if visible_warnings:
         lines.append("")
     return "\n".join(lines)
 
@@ -168,12 +187,11 @@ def answer_state_query(fields: dict, warnings: List[str], kind: str) -> str:
         phrase = stage[len(product) + 1:] if stage.startswith(f"{product} ") else stage
         milestone = fields.get("current_milestone")
         if fields.get("milestone_status") == "pending-next-milestone":
-            milestone = f"{milestone} (no task selected — awaiting the next milestone)"
+            milestone = "None — no task selected"
         out = [
             f"{product} is in {phrase}.",
             f"Milestone: {milestone}",
             f"Current task: {fields.get('current_task', 'None')}",
-            f"Last completed: {fields.get('what_just_completed')}",
             f"Live state: {fields.get('current_verified_state')}",
             f"Next step: {fields.get('next_step', fields.get('exact_next_action'))}",
         ]
@@ -183,10 +201,8 @@ def answer_state_query(fields: dict, warnings: List[str], kind: str) -> str:
             out.append(f"A human decision is needed: {reason or 'see `review`'}.")
         else:
             out.append("No human decision is needed right now.")
-        if fields.get("historical_note"):
-            out.append(f"Earlier, for history only — {fields['historical_note']}")
-        for w in warnings:
-            out.append(f"Warning: {w}")
+        for warning in _visible_warnings(warnings):
+            out.append(f"Warning: {warning}")
         return "\n".join(out)
 
     if kind == "next":
@@ -456,6 +472,26 @@ class DogBuildShell:
             self.say(text)
         self.say("")
 
+    def _claude_message(self, owner_message: str) -> str:
+        """Attach fresh repository truth to every Claude turn.
+
+        Recovered Claude sessions are useful for conversational continuity, but
+        their remembered branch, HEAD, tests, or task can be stale. This live
+        block is deliberately repeated on every turn and overrides that memory.
+        """
+        return (
+            "[DogBuild live context — authoritative for this turn]\n"
+            f"Repository: {self.root}\n"
+            f"Live state: {self.fields.get('current_verified_state', '(unknown)')}\n"
+            f"Current task: {self.fields.get('current_task', 'None')}\n"
+            f"Next step: {self.fields.get('next_step', self.fields.get('exact_next_action', ''))}\n"
+            "If earlier conversation memory conflicts with this block or with "
+            "fresh repository inspection, ignore the older claim. Do not present "
+            "older commit, test, or task details as current.\n"
+            "[Owner request]\n"
+            f"{owner_message}"
+        )
+
     # -- built-in commands -------------------------------------------- #
 
     def _builtin_help(self) -> str:
@@ -589,7 +625,7 @@ class DogBuildShell:
 
         self.say("  … Claude Code is working (DogBuild is the interface).")
         try:
-            ok, response = self.claude.send(text)
+            ok, response = self.claude.send(self._claude_message(text))
         except KeyboardInterrupt:
             self._respond("  (interrupted — nothing further was sent)")
             return True
