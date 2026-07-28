@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/dogbuild`
-- **State updated:** 2026-07-28T05:38:46Z
+- **State updated:** 2026-07-28T05:44:07Z
 
 ## Objective
 
@@ -22,9 +22,9 @@ Real use over several normal work sessions, then one outside-user installation t
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `b985dfb81f952ad6b1e5239425314af5fc8a9fc7`
+- **HEAD:** `785643f85b8573b3b5dc98ee4407b44c94646e3d`
 - **Worktree:** clean
-- **Captured:** 2026-07-28T03:57:14Z
+- **Captured:** 2026-07-28T05:44:07Z
 
 ## Requested items
 
@@ -247,4 +247,18 @@ Real use over several normal work sessions, then one outside-user installation t
   - The review importer splits a wrapped condition across recorded lines; PhotoSahi's 7 conditions were stored as 10 entries. All are closed, so it is cosmetic today, but the parser should be fixed before the next reviewer round-trip.
   - PhotoSahi's .ai/ is untracked by repo policy, so its reconciled ledger exists only on this machine.
   - Automatic ChatGPT transport remains deferred; commercial demand and payment remain unvalidated.
+
+### 2026-07-28T05:44:07Z — DogBuild repository and distribution rename complete: local checkout is dogbuild, internal psk compatibility remains, and the full suite passes.
+
+- Implemented:
+  - Renamed the local repository directory from project-state-keeper to dogbuild
+  - Renamed the Python distribution to dogbuild while preserving dogbuild, statekeeper, and psk command aliases plus the internal psk package
+  - Updated user-facing packets, CLI help, README, installation docs, schemas, examples, and focused branding tests
+  - Updated persistent identity to DogBuild/dogbuild and imported owner-approved Goal Contract revision 3 without changing the milestone
+  - Reinstalled the editable DogBuild command and refreshed the Claude DogBuild skill
+- Next safe action: Stop. Do not start another feature. The owner can test the renamed DogBuild checkout later.
+- Unresolved risks:
+  - Sibling repositories were intentionally untouched; any cached absolute DogBuild hook path there will be regenerated on their next dogbuild start
+  - The Revenue Opportunity Lab keeps its existing historical project-state-keeper record filename and was intentionally not modified
+  - No remote is configured for DogBuild, so no hosted repository was renamed or published
 

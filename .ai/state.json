@@ -102,6 +102,43 @@
         "Interactive TUI startup verified headlessly (no TTY available to the agent); owner should eyeball dogbuild start once"
       ]
     },
+    "2602ad6b-3182-4bd2-8f01-a6d68185b7a1": {
+      "created_at": "2026-07-28T05:44:07Z",
+      "evidence_ids": [],
+      "failures_resolved": [
+        "The first no-build-isolation install lacked setuptools.build_meta; the normal isolated editable install succeeded",
+        "The first full suite exposed one line-wrapping-sensitive branding assertion; the assertion was normalized and all 390 tests then passed"
+      ],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-28T05:44:07Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "785643f85b8573b3b5dc98ee4407b44c94646e3d"
+      },
+      "id": "2602ad6b-3182-4bd2-8f01-a6d68185b7a1",
+      "implemented": [
+        "Renamed the local repository directory from project-state-keeper to dogbuild",
+        "Renamed the Python distribution to dogbuild while preserving dogbuild, statekeeper, and psk command aliases plus the internal psk package",
+        "Updated user-facing packets, CLI help, README, installation docs, schemas, examples, and focused branding tests",
+        "Updated persistent identity to DogBuild/dogbuild and imported owner-approved Goal Contract revision 3 without changing the milestone",
+        "Reinstalled the editable DogBuild command and refreshed the Claude DogBuild skill"
+      ],
+      "next_safe_action": "Stop. Do not start another feature. The owner can test the renamed DogBuild checkout later.",
+      "summary": "DogBuild repository and distribution rename complete: local checkout is dogbuild, internal psk compatibility remains, and the full suite passes.",
+      "tested": [
+        "python3 -m unittest discover -s tests -t . = 390 pass / 0 fail",
+        "dogbuild --version reports DogBuild 0.0.0 from the renamed editable checkout",
+        "dogbuild context show identifies project DogBuild and repository dogbuild",
+        "dogbuild start . --dry-run reports dogBuild> mode, installed governor hook, Claude runtime, and current Goal Contract revision 3"
+      ],
+      "unresolved_risks": [
+        "Sibling repositories were intentionally untouched; any cached absolute DogBuild hook path there will be regenerated on their next dogbuild start",
+        "The Revenue Opportunity Lab keeps its existing historical project-state-keeper record filename and was intentionally not modified",
+        "No remote is configured for DogBuild, so no hosted repository was renamed or published"
+      ]
+    },
     "2740fddd-e6c1-4477-a39f-d345126e802c": {
       "created_at": "2026-07-25T23:30:33Z",
       "evidence_ids": [],
@@ -670,11 +707,11 @@
   "execution_plan": null,
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-28T03:57:14Z",
+    "captured_at": "2026-07-28T05:44:07Z",
     "detached": false,
     "dirty": false,
     "dirty_fingerprint": null,
-    "head_commit": "b985dfb81f952ad6b1e5239425314af5fc8a9fc7"
+    "head_commit": "785643f85b8573b3b5dc98ee4407b44c94646e3d"
   },
   "goal_contract": {
     "acceptance_criteria": [
@@ -805,7 +842,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "a4a9c0f0-fc3e-416f-8e22-f46de4aecbb0",
+  "last_checkpoint_id": "2602ad6b-3182-4bd2-8f01-a6d68185b7a1",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -1119,5 +1156,5 @@
     "set_at": "2026-07-28T05:38:46Z",
     "version": 9
   },
-  "updated_at": "2026-07-28T05:38:46Z"
+  "updated_at": "2026-07-28T05:44:07Z"
 }
