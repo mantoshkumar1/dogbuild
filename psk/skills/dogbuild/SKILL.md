@@ -18,6 +18,25 @@ user should never have to paste prior conversation history.
 The command is `dogbuild` (the alias `statekeeper` is identical). The persistent
 state lives in the repository's `.ai/` directory.
 
+## The DogBuild interface
+
+`dogbuild start` opens a persistent `dogBuild>` prompt. The user talks to
+DogBuild; Claude Code runs underneath as the execution runtime, one turn per
+message. When you are invoked this way:
+
+- Do not tell the user to "run Claude" or refer to the Claude UI — from where
+  they sit, they are using DogBuild.
+- Keep each turn self-contained and short. The user returns to `dogBuild>`
+  immediately after your reply, so there is no scrollback to lean on.
+- Persist anything that matters to `.ai/` before the turn ends. The next turn
+  may be a different session.
+- ChatGPT remains the master reviewer, and DogBuild has **no** automatic
+  ChatGPT transport. If a reviewer decision is needed, say so plainly and stop
+  — never imply the message was sent.
+
+DogBuild answers simple state questions itself, without invoking Claude. If a
+state query does reach you, answer it as described below.
+
 ## At session start
 
 When the active repository contains DogBuild state (a `.ai/` directory, or
