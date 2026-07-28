@@ -1,18 +1,18 @@
 {
   "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "Fix DogBuild launcher's generated Claude Code PreToolUse hook settings",
-  "changed": "psk/launcher.py (matcher-group hook shape + non-destructive merge_hooks_config); tests/test_hook_settings.py (20 regression tests)",
-  "claimed_head": "66bf612b64d73a3df8f863a71b06c6b56f87f306",
-  "created_at": "2026-07-26T16:53:18Z",
+  "building": "Persistent dogBuild> terminal interface",
+  "changed": "psk/shell.py (new), psk/launcher.py, psk/__main__.py, psk/skills/dogbuild/SKILL.md, README.md, .gitignore, tests/test_shell.py (new), tests/test_start.py",
+  "claimed_head": "3ec9727c51b63f4301c1ee5115ac579a6637c102",
+  "created_at": "2026-07-28T03:11:55Z",
   "failed": "None",
   "goal_alignment": {
-    "explanation": "Repairs the existing local control loop; no new permission or governor features added",
-    "goal_contract_revision": 1,
+    "explanation": "",
+    "goal_contract_revision": null,
     "status": "IN_SCOPE"
   },
-  "incomplete": "None",
-  "next_action": "Owner confirms dogbuild start in a real terminal; do not begin the next slice",
+  "incomplete": "Automatic ChatGPT transport; simultaneous side-channel input while a turn is running",
+  "next_action": "Await ChatGPT review of this slice; do not begin another slice, push, or publish",
   "role": "execution_agent",
-  "verified": "279 unittest tests green; PhotoSahi .claude/settings.local.json regenerated from the broken file — valid matcher-group shape, all 42 allow / 5 deny / defaultMode preserved, byte-identical across 4 dogbuild start runs; Claude starts with no Settings Error and the broker hook fires on a real tool call"
+  "verified": "329/329 unit tests pass; PhotoSahi dry run and interactive acceptance (local state query with no Claude call, read-only Claude turn, session recovery across runs) with PhotoSahi source unchanged at 0a36116"
 }

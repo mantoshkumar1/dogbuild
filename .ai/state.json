@@ -198,6 +198,46 @@
         "PAYMENT/DISTRIBUTION unvalidated"
       ]
     },
+    "52607af2-fcdc-46dd-8c0c-8c5630ca11c1": {
+      "created_at": "2026-07-28T03:11:49Z",
+      "evidence_ids": [],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-28T03:11:49Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "3ec9727c51b63f4301c1ee5115ac579a6637c102"
+      },
+      "id": "52607af2-fcdc-46dd-8c0c-8c5630ca11c1",
+      "implemented": [
+        "psk/shell.py: dogBuild> REPL — exact prompt, returns to it after every response",
+        "local state queries (What's happening? / next / tests / remaining / human) answered without invoking Claude",
+        "built-ins: help, status, next, plan, parked, review, refresh, mode, clear, exit",
+        "Claude turns via `claude --print` argument list; governor PreToolUse hook and permission mode still in force",
+        "Claude session kept across turns and recovered across runs via .ai/dogbuild_session.json (gitignored)",
+        "safe pause with a plain explanation when a human or ChatGPT decision is required; no faked ChatGPT transport",
+        "launcher default switched to the shell; prior exec behavior preserved behind --raw-claude; new --new-session",
+        "README quickstart and DogBuild Claude skill updated with the honest interface/runtime/reviewer boundary"
+      ],
+      "next_safe_action": "Await ChatGPT review of the persistent dogBuild> slice. Do not begin another slice, push, or publish.",
+      "summary": "Persistent dogBuild> terminal interface shipped. `dogbuild start` now opens a branded REPL where DogBuild is the visible interface and Claude Code runs underneath as the execution runtime, one turn per message.",
+      "tested": [
+        "python3 -m unittest discover -s tests -t . = 329 pass / 0 fail",
+        "PhotoSahi dry run: mode=dogbuild-shell, prompt=dogBuild>, hook installed, skill up_to_date",
+        "PhotoSahi interactive: state query answered locally with zero Claude calls",
+        "PhotoSahi interactive: read-only Claude turn ran underneath, replied, returned to dogBuild>; git status and HEAD 0a36116 unchanged",
+        "PhotoSahi session recovery: second and third runs resumed session 02310f7a and retained conversation context",
+        "governor broker fired during the shell's Claude turn (.ai/execution_audit.jsonl)"
+      ],
+      "unresolved_risks": [
+        "Automatic ChatGPT transport is still not built; reviewer round-trips remain manual.",
+        "Turns are strictly sequential — no simultaneous side-channel input while Claude is working.",
+        "Print-mode turns cannot show Claude's interactive permission prompt; a blocked tool call is denied rather than escalated in-line.",
+        "Commercial demand and payment for DogBuild remain unvalidated."
+      ]
+    },
     "73acbf7d-0357-46d9-ae9f-246bf26bcc5d": {
       "created_at": "2026-07-25T21:06:33Z",
       "evidence_ids": [],
@@ -557,11 +597,11 @@
   "execution_plan": null,
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-26T16:53:31Z",
+    "captured_at": "2026-07-28T03:11:49Z",
     "detached": false,
     "dirty": false,
     "dirty_fingerprint": null,
-    "head_commit": "66bf612b64d73a3df8f863a71b06c6b56f87f306"
+    "head_commit": "3ec9727c51b63f4301c1ee5115ac579a6637c102"
   },
   "goal_contract": {
     "acceptance_criteria": [
@@ -694,7 +734,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "22ce3db0-8771-4f43-9c75-746544b91f8f",
+  "last_checkpoint_id": "52607af2-fcdc-46dd-8c0c-8c5630ca11c1",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -1008,5 +1048,5 @@
     "set_at": "2026-07-25T21:59:04Z",
     "version": 7
   },
-  "updated_at": "2026-07-26T16:53:31Z"
+  "updated_at": "2026-07-28T03:11:49Z"
 }

@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-26T16:53:31Z
+- **State updated:** 2026-07-28T03:11:49Z
 
 ## Objective
 
@@ -22,9 +22,9 @@ Reviewer policy + full exception handling slice
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `66bf612b64d73a3df8f863a71b06c6b56f87f306`
+- **HEAD:** `3ec9727c51b63f4301c1ee5115ac579a6637c102`
 - **Worktree:** clean
-- **Captured:** 2026-07-26T16:53:31Z
+- **Captured:** 2026-07-28T03:11:49Z
 
 ## Requested items
 
@@ -199,4 +199,22 @@ Reviewer policy + full exception handling slice
 - Next safe action: Owner confirms dogbuild start in a real terminal; do not begin the next slice
 - Unresolved risks:
   - Interactive TUI startup verified headlessly (no TTY available to the agent); owner should eyeball dogbuild start once
+
+### 2026-07-28T03:11:49Z — Persistent dogBuild> terminal interface shipped. `dogbuild start` now opens a branded REPL where DogBuild is the visible interface and Claude Code runs underneath as the execution runtime, one turn per message.
+
+- Implemented:
+  - psk/shell.py: dogBuild> REPL — exact prompt, returns to it after every response
+  - local state queries (What's happening? / next / tests / remaining / human) answered without invoking Claude
+  - built-ins: help, status, next, plan, parked, review, refresh, mode, clear, exit
+  - Claude turns via `claude --print` argument list; governor PreToolUse hook and permission mode still in force
+  - Claude session kept across turns and recovered across runs via .ai/dogbuild_session.json (gitignored)
+  - safe pause with a plain explanation when a human or ChatGPT decision is required; no faked ChatGPT transport
+  - launcher default switched to the shell; prior exec behavior preserved behind --raw-claude; new --new-session
+  - README quickstart and DogBuild Claude skill updated with the honest interface/runtime/reviewer boundary
+- Next safe action: Await ChatGPT review of the persistent dogBuild> slice. Do not begin another slice, push, or publish.
+- Unresolved risks:
+  - Automatic ChatGPT transport is still not built; reviewer round-trips remain manual.
+  - Turns are strictly sequential — no simultaneous side-channel input while Claude is working.
+  - Print-mode turns cannot show Claude's interactive permission prompt; a blocked tool call is denied rather than escalated in-line.
+  - Commercial demand and payment for DogBuild remain unvalidated.
 
