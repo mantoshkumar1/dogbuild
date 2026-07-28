@@ -1,11 +1,15 @@
-"""DogBuild launcher — branded entry point that recovers state and starts Claude Code.
+"""DogBuild launcher — branded entry point that recovers state and starts DogBuild.
 
 `dogbuild start` detects the repository, verifies DogBuild initialization, reads
 persistent state, displays a branded banner, ensures the Claude skill is current,
-and launches Claude Code with a continuation instruction and safe permission mode.
+and opens the persistent `dogBuild>` shell (see `psk.shell`). Claude Code runs
+underneath as the execution runtime, one turn at a time.
 
-Uses os.execvp (no unsafe shell invocation). No dangerously-skip-permissions.
-Process exec replaces the launcher so terminal I/O stays clean.
+`dogbuild start --raw-claude` preserves the previous behavior: exec Claude Code
+directly, with no DogBuild shell and no governor hook.
+
+Uses os.execvp / argument lists (no unsafe shell invocation). No
+dangerously-skip-permissions.
 """
 
 from __future__ import annotations
@@ -18,7 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from . import (brief as brief_mod, gitutil, identity as identity_mod,
-               install as install_mod, store)
+               install as install_mod, shell as shell_mod, store)
 from .errors import StateNotFoundError
 
 
@@ -211,7 +215,8 @@ def recover_state(root: str) -> dict:
     fields, warnings = brief_mod.build(root)
     return {
         "project": fields["product"],
-        "stage": fields["current_milestone"],
+        "stage": shell_mod.derive_stage(fields),
+        "fields": fields,
         "current_milestone": fields["current_milestone"],
         "exact_next_action": fields["exact_next_action"],
         "current_verified_state": fields["current_verified_state"],
@@ -252,24 +257,17 @@ def _try_recover_autonomy(root: str) -> dict:
 
 
 def render_banner(state: dict) -> str:
-    """Render the branded DogBuild status banner."""
-    lines = [
-        "",
-        "DogBuild>",
-        "",
-        f"  Project:            {state['project']}",
-        f"  Stage:              {state['stage']}",
-        f"  Current milestone:  {state['current_milestone']}",
-        f"  Last verified:      {state['current_verified_state']}",
-        f"  Exact next action:  {state['exact_next_action']}",
-        f"  Human needed:       {state['human_decision_needed']}"
-        + (f" — {state['human_decision_reason']}" if state['human_decision_reason'] else ""),
-        "",
-    ]
-    if state.get("warnings"):
-        for w in state["warnings"]:
-            lines.append(f"  Warning: {w}")
-        lines.append("")
+    """Render the branded DogBuild status banner.
+
+    Same banner the `dogBuild>` shell shows, plus the exact next action — which
+    the shell keeps one keystroke away behind `next` rather than in the header.
+    """
+    banner = shell_mod.render_banner(state["fields"], state.get("warnings") or [])
+    lines = banner.split("\n")
+    for index, line in enumerate(lines):
+        if line.startswith("  Human needed:"):
+            lines.insert(index, f"  Exact next action:  {state['exact_next_action']}")
+            break
     return "\n".join(lines)
 
 
@@ -352,15 +350,17 @@ def start(
     *,
     permission_mode: str = DEFAULT_PERMISSION_MODE,
     raw_claude: bool = False,
+    new_session: bool = False,
     dry_run: bool = False,
 ) -> dict:
     """Full start sequence. Returns a result dict.
 
-    In normal mode, this function does NOT return — it execs Claude Code.
-    In dry-run mode, it returns the full diagnostic dict.
+    By default this opens the persistent `dogBuild>` shell and does not return
+    until the user exits; it then raises SystemExit with the shell's code.
+    In dry-run mode it returns the full diagnostic dict instead.
 
-    If *raw_claude* is True, skip DogBuild hook installation and launch
-    Claude Code with its native permission mode (no governor broker).
+    If *raw_claude* is True, skip the DogBuild shell and the governor hook and
+    exec Claude Code directly (the pre-shell behavior).
     """
     # 1. Validate permission mode
     permission_mode = validate_permission_mode(permission_mode)
@@ -395,11 +395,17 @@ def start(
     if not raw_claude:
         hooks_config = write_hooks_config(root, dry_run=dry_run)
 
+    # 12. Session recovery pointer (informational in dry-run)
+    prior_session = None if new_session else shell_mod.load_session(root)
+
     result = {
         "root": root,
         "project": state["project"],
         "state": state,
         "banner": banner,
+        "session_banner": shell_mod.render_banner(state["fields"], state["warnings"]),
+        "prompt": shell_mod.PROMPT,
+        "mode": "raw-claude" if raw_claude else "dogbuild-shell",
         "permission_mode": permission_mode,
         "claude_executable": claude_path,
         "instruction": instruction,
@@ -407,28 +413,15 @@ def start(
         "skill": skill_result,
         "hooks": hooks_config,
         "raw_claude": raw_claude,
+        "new_session": new_session,
+        "recovered_session": (prior_session or {}).get("session_id"),
         "dry_run": dry_run,
     }
 
     if dry_run:
         return result
 
-    # Not a dry run — actually launch
-    if not claude_path:
-        print("error: Claude Code is not installed or not on PATH.\n"
-              "Install it from https://docs.anthropic.com/en/docs/claude-code\n"
-              "or ensure the 'claude' command is available.",
-              file=sys.stderr)
-        sys.exit(1)
-
-    # Print banner
-    print(banner)
-    if raw_claude:
-        print("  Starting Claude (raw mode — no DogBuild governor)…\n")
-    else:
-        print("  Starting Claude with DogBuild governor…\n")
-
-    # Set PYTHONPATH so hook subprocess can import psk
+    # Set PYTHONPATH so the hook subprocess can import psk
     psk_root = _find_psk_root()
     env_path = os.environ.get("PYTHONPATH", "")
     if psk_root not in env_path:
@@ -436,6 +429,30 @@ def start(
             f"{psk_root}:{env_path}" if env_path else psk_root
         )
 
-    # Exec Claude — replaces this process
-    os.execvp(claude_path, args)
-    # Never reached
+    if raw_claude:
+        # Pre-shell behavior: hand the terminal straight to Claude Code.
+        if not claude_path:
+            print("error: Claude Code is not installed or not on PATH.\n"
+                  "Install it from https://docs.anthropic.com/en/docs/claude-code\n"
+                  "or ensure the 'claude' command is available.",
+                  file=sys.stderr)
+            sys.exit(1)
+        print(banner)
+        print("  Starting Claude (raw mode — no DogBuild shell, no governor)…\n")
+        os.execvp(claude_path, args)  # replaces this process
+        return result  # never reached
+
+    # Default: the persistent dogBuild> shell. Claude runs underneath per turn.
+    if not claude_path:
+        print("  Note: Claude Code is not on PATH. DogBuild state commands will\n"
+              "  work; turns that need the execution runtime will not.\n",
+              file=sys.stderr)
+
+    sys.exit(
+        shell_mod.run_shell(
+            root,
+            permission_mode=permission_mode,
+            system_prompt=instruction,
+            resume=not new_session,
+        )
+    )

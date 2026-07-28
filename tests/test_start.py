@@ -58,7 +58,9 @@ class TestStartDryRun(unittest.TestCase):
     def test_dry_run_returns_success(self):
         code, out = run(["start", self.root, "--dry-run"])
         self.assertEqual(code, exit_codes.SUCCESS)
-        self.assertIn("DogBuild>", out)
+        self.assertIn("DogBuild", out)
+        # The dry run must show the exact interactive prompt it would open.
+        self.assertIn("dogBuild>", out)
 
     def test_dry_run_json_contains_required_fields(self):
         code, out = run(["start", self.root, "--dry-run", "--json"])
@@ -200,12 +202,21 @@ class TestStartClaudeAvailability(unittest.TestCase):
         # claude_executable is either a path or None; either is valid in dry run
         self.assertIn("claude_executable", result)
 
-    def test_missing_claude_in_live_mode_exits(self):
-        """When claude is not found and not dry-run, should sys.exit."""
+    def test_missing_claude_in_raw_mode_exits(self):
+        """Raw mode hands the terminal to Claude, so a missing binary is fatal."""
         with mock.patch.object(launcher, "find_claude", return_value=None):
             with self.assertRaises(SystemExit) as ctx:
-                launcher.start(self.root, dry_run=False)
+                launcher.start(self.root, raw_claude=True, dry_run=False)
             self.assertEqual(ctx.exception.code, 1)
+
+    def test_missing_claude_still_opens_the_shell(self):
+        """Default mode degrades: state commands work without Claude installed."""
+        with mock.patch.object(launcher, "find_claude", return_value=None), \
+                mock.patch.object(launcher.shell_mod, "run_shell", return_value=0) as m:
+            with self.assertRaises(SystemExit) as ctx:
+                launcher.start(self.root, dry_run=False)
+            self.assertEqual(ctx.exception.code, 0)
+            m.assert_called_once()
 
 
 class TestStartArguments(unittest.TestCase):
@@ -353,6 +364,69 @@ class TestStartCompatibility(unittest.TestCase):
             self.assertTrue(hasattr(ns, "func"), f"{subcmd} has no func")
 
 
+class TestStartLaunchMode(unittest.TestCase):
+    """Default start opens the DogBuild shell; --raw-claude execs Claude."""
+
+    def setUp(self):
+        self.regdir = tempfile.mkdtemp(prefix="psk-reg-")
+        self._old_reg = os.environ.get(registry.REGISTRY_ENV)
+        os.environ[registry.REGISTRY_ENV] = self.regdir
+        self.skills_dir = tempfile.mkdtemp(prefix="psk-skills-")
+        self._old_skills = os.environ.get("CLAUDE_SKILLS_DIR")
+        os.environ["CLAUDE_SKILLS_DIR"] = self.skills_dir
+        self.d = make_repo(with_commit=True)
+        self.root = gitutil.repo_root(self.d)
+        _init_and_genesis(self.root)
+
+    def tearDown(self):
+        if self._old_reg is None:
+            os.environ.pop(registry.REGISTRY_ENV, None)
+        else:
+            os.environ[registry.REGISTRY_ENV] = self._old_reg
+        if self._old_skills is None:
+            os.environ.pop("CLAUDE_SKILLS_DIR", None)
+        else:
+            os.environ["CLAUDE_SKILLS_DIR"] = self._old_skills
+        shutil.rmtree(self.regdir, ignore_errors=True)
+        shutil.rmtree(self.skills_dir, ignore_errors=True)
+        cleanup(self.d)
+
+    def test_dry_run_reports_shell_mode_and_prompt(self):
+        result = launcher.start(self.root, dry_run=True)
+        self.assertEqual(result["mode"], "dogbuild-shell")
+        self.assertEqual(result["prompt"], "dogBuild>")
+
+    def test_dry_run_raw_claude_reports_raw_mode(self):
+        result = launcher.start(self.root, raw_claude=True, dry_run=True)
+        self.assertEqual(result["mode"], "raw-claude")
+        self.assertIsNone(result["hooks"])
+
+    def test_default_start_runs_the_shell_not_execvp(self):
+        with mock.patch.object(launcher, "find_claude", return_value="/usr/bin/claude"), \
+                mock.patch.object(launcher.shell_mod, "run_shell", return_value=0) as run_shell, \
+                mock.patch("os.execvp") as execvp:
+            with self.assertRaises(SystemExit):
+                launcher.start(self.root, dry_run=False)
+            run_shell.assert_called_once()
+            execvp.assert_not_called()
+
+    def test_raw_claude_execs_and_skips_the_shell(self):
+        with mock.patch.object(launcher, "find_claude", return_value="/usr/bin/claude"), \
+                mock.patch.object(launcher.shell_mod, "run_shell") as run_shell, \
+                mock.patch("os.execvp") as execvp:
+            launcher.start(self.root, raw_claude=True, dry_run=False)
+            execvp.assert_called_once()
+            run_shell.assert_not_called()
+
+    def test_session_banner_matches_required_format(self):
+        result = launcher.start(self.root, dry_run=True)
+        banner = result["session_banner"]
+        self.assertIn("DogBuild", banner)
+        for label in ("Project:", "Stage:", "Current milestone:",
+                      "Last verified:", "Human needed:"):
+            self.assertIn(label, banner)
+
+
 class TestStartBanner(unittest.TestCase):
     """Banner rendering."""
 
@@ -382,7 +456,12 @@ class TestStartBanner(unittest.TestCase):
 
     def test_banner_contains_dogbuild_brand(self):
         result = launcher.start(self.root, dry_run=True)
-        self.assertIn("DogBuild>", result["banner"])
+        self.assertIn("DogBuild", result["banner"])
+
+    def test_banner_contains_exact_next_action(self):
+        result = launcher.start(self.root, dry_run=True)
+        self.assertIn("Exact next action:", result["banner"])
+        self.assertIn(result["state"]["exact_next_action"], result["banner"])
 
     def test_banner_contains_project_name(self):
         result = launcher.start(self.root, dry_run=True)

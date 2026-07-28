@@ -359,6 +359,7 @@ def _cmd_start(args) -> int:
             args.path,
             permission_mode=args.permission_mode,
             raw_claude=args.raw_claude,
+            new_session=args.new_session,
             dry_run=args.dry_run,
         )
     except ValueError as exc:
@@ -374,10 +375,15 @@ def _cmd_start(args) -> int:
             print(json.dumps(out, indent=2, sort_keys=True, default=str))
         else:
             print(result["banner"])
+            print(f"  Mode:             {result['mode']}")
+            print(f"  Interactive prompt: {result['prompt']}"
+                  if result["mode"] == "dogbuild-shell"
+                  else "  Interactive prompt: (Claude Code's own)")
             print(f"  Permission mode:  {result['permission_mode']}")
             print(f"  Raw Claude:       {result['raw_claude']}")
             print(f"  Claude executable: {result['claude_executable'] or '(not found)'}")
             print(f"  Skill status:     {result['skill']['status']}")
+            print(f"  Recovered session: {result['recovered_session'] or '(none — a new session would start)'}")
             if result.get("hooks"):
                 print(f"  Hook installed:   PreToolUse → DogBuild governor broker")
             else:
@@ -390,7 +396,7 @@ def _cmd_start(args) -> int:
             print("  Claude argument list:")
             print(f"    {result['args']}")
             print()
-            print("  (dry run — Claude was not started)")
+            print("  (dry run — DogBuild was not started)")
     return SUCCESS
 
 
@@ -645,14 +651,16 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     # start: branded launcher (launches Claude Code with DogBuild context)
-    pstart = sub.add_parser("start", help="launch Claude Code with DogBuild context")
+    pstart = sub.add_parser("start", help="open the persistent dogBuild> interface")
     pstart.add_argument("path", nargs="?", default=".")
     pstart.add_argument("--dry-run", action="store_true",
-                        help="show what would happen; do not start Claude")
+                        help="show what would happen; do not start DogBuild")
     pstart.add_argument("--permission-mode", default=launcher_mod.DEFAULT_PERMISSION_MODE,
                         help=f"Claude Code permission mode (default: {launcher_mod.DEFAULT_PERMISSION_MODE})")
     pstart.add_argument("--raw-claude", action="store_true",
-                        help="skip DogBuild governor hook; use Claude Code's native permissions")
+                        help="skip the DogBuild shell and governor hook; exec Claude Code directly")
+    pstart.add_argument("--new-session", action="store_true",
+                        help="start a fresh Claude session instead of recovering the last one")
     pstart.add_argument("--json", action="store_true")
     pstart.set_defaults(func=_cmd_start)
 
