@@ -21,3 +21,6 @@ htmlcov/
 *.swp
 .idea/
 .vscode/
+
+# DogBuild machine-local session pointer (not shared state)
+.ai/dogbuild_session.json
