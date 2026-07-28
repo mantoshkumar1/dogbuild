@@ -397,6 +397,45 @@
         "manual transport still required for ChatGPT reviews (automation not built)",
         "PAYMENT + DISTRIBUTION unvalidated"
       ]
+    },
+    "ec8417de-0a69-4479-8dbc-9080e9bca092": {
+      "created_at": "2026-07-28T03:42:48Z",
+      "evidence_ids": [],
+      "failures_resolved": [],
+      "git_state": {
+        "branch": "main",
+        "captured_at": "2026-07-28T03:42:48Z",
+        "detached": false,
+        "dirty": false,
+        "dirty_fingerprint": null,
+        "head_commit": "f0d6c712079a469d1dd1e00cfe020b233d3240b7"
+      },
+      "id": "ec8417de-0a69-4479-8dbc-9080e9bca092",
+      "implemented": [
+        "psk/governor/turngrant.py: turn-scoped owner grant — repository/HEAD/epoch/one-turn bound, repository_read + tests_and_builds only, conservative eligibility, expires after the turn and is swept at shell start and exit",
+        "broker enforces the grant directly: allows read + existing tests, denies edits/commits/dependencies/network/secrets/out-of-repo/outward-facing itself rather than falling through",
+        "broker allows Skill only for exactly dogbuild, when installed and identity is valid; arbitrary skills denied; audited as read-only",
+        "classifier: read-only git plumbing (rev-parse, describe, blame, shortlog, ls-files, read-only remote) is tier 0",
+        "brief.py: order of truth applied — a checkpoint at an older commit can no longer supply current evidence; a declaration at the live HEAD wins; stale checkpoint demoted to a labelled historical note plus a warning",
+        "brief.py: no active plan + idle autonomy reports Current task: None / Next step: No task selected / pending-next-milestone, without touching the Goal Contract",
+        "audit records policy_rule=turn_grant with the grant id on both allows and denies"
+      ],
+      "next_safe_action": "Await ChatGPT review of the three defect fixes. Do not begin another slice, push, or publish.",
+      "summary": "Fixed the three defects the real-terminal PhotoSahi acceptance exposed: turn-scoped owner authorization, the DogBuild skill tool, and stale plain-English orientation.",
+      "tested": [
+        "python3 -m unittest discover -s tests -t . = 383 pass / 0 fail (329 -> 383; 54 new)",
+        "PhotoSahi real acceptance: the previously-denied instruction ran; npm run test:unit reported 126 pass / 0 fail; no permission dialog",
+        "PhotoSahi: git status --porcelain unchanged (only pre-existing untracked .ai/), HEAD still 0a36116",
+        "PhotoSahi: audit rows policy_rule=turn_grant, classifications tests_and_builds and repository_read, both allow",
+        "PhotoSahi: .ai/turn_grant.json absent after the turn (grant expired)",
+        "real PreToolUse hook: Skill(dogbuild) allow, Skill(some-other-skill) deny, npm run test:unit deny with no grant active",
+        "PhotoSahi orientation now reports 0a36116, adopted and verified, 126/220/40, no active task; multi-face and 5a160ca appear only as history"
+      ],
+      "unresolved_risks": [
+        "PhotoSahi's ledger still records git_state 5a160ca with 7 reviewer conditions open; the orientation no longer presents it as current, but the closeout itself is an owner decision and was not performed.",
+        "Turn-grant eligibility is a keyword classifier; a safe instruction phrased unusually will simply get no grant (fails closed, but the owner must rephrase).",
+        "Automatic ChatGPT transport remains deferred; commercial demand and payment remain unvalidated."
+      ]
     }
   },
   "decisions": {
@@ -597,11 +636,11 @@
   "execution_plan": null,
   "git_state": {
     "branch": "main",
-    "captured_at": "2026-07-28T03:11:49Z",
+    "captured_at": "2026-07-28T03:42:48Z",
     "detached": false,
     "dirty": false,
     "dirty_fingerprint": null,
-    "head_commit": "3ec9727c51b63f4301c1ee5115ac579a6637c102"
+    "head_commit": "f0d6c712079a469d1dd1e00cfe020b233d3240b7"
   },
   "goal_contract": {
     "acceptance_criteria": [
@@ -734,7 +773,7 @@
       "updated_at": "2026-07-25T20:27:14Z"
     }
   },
-  "last_checkpoint_id": "52607af2-fcdc-46dd-8c0c-8c5630ca11c1",
+  "last_checkpoint_id": "ec8417de-0a69-4479-8dbc-9080e9bca092",
   "objective": {
     "set_at": "2026-07-25T18:26:36Z",
     "text": "Build Project State Keeper MVP (dogfood-first). Day 1: canonical project-state schema.",
@@ -1048,5 +1087,5 @@
     "set_at": "2026-07-25T21:59:04Z",
     "version": 7
   },
-  "updated_at": "2026-07-28T03:11:49Z"
+  "updated_at": "2026-07-28T03:42:48Z"
 }

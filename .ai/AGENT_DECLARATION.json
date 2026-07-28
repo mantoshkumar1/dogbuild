@@ -1,18 +1,18 @@
 {
   "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "Persistent dogBuild> terminal interface",
-  "changed": "psk/shell.py (new), psk/launcher.py, psk/__main__.py, psk/skills/dogbuild/SKILL.md, README.md, .gitignore, tests/test_shell.py (new), tests/test_start.py",
-  "claimed_head": "3ec9727c51b63f4301c1ee5115ac579a6637c102",
-  "created_at": "2026-07-28T03:11:55Z",
+  "building": "Fixes for the three defects exposed by the real-terminal PhotoSahi acceptance",
+  "changed": "psk/governor/turngrant.py (new), psk/governor/broker.py, psk/governor/classifier.py, psk/brief.py, psk/shell.py, .gitignore, tests/test_turn_grant.py (new), tests/test_shell.py",
+  "claimed_head": "f0d6c712079a469d1dd1e00cfe020b233d3240b7",
+  "created_at": "2026-07-28T03:43:05Z",
   "failed": "None",
   "goal_alignment": {
     "explanation": "",
     "goal_contract_revision": null,
     "status": "IN_SCOPE"
   },
-  "incomplete": "Automatic ChatGPT transport; simultaneous side-channel input while a turn is running",
-  "next_action": "Await ChatGPT review of this slice; do not begin another slice, push, or publish",
+  "incomplete": "PhotoSahi ledger closeout (state.json still at 5a160ca with 7 open conditions) — an owner decision, deliberately not performed",
+  "next_action": "Await ChatGPT review of the three defect fixes; do not begin another slice, push, or publish",
   "role": "execution_agent",
-  "verified": "329/329 unit tests pass; PhotoSahi dry run and interactive acceptance (local state query with no Claude call, read-only Claude turn, session recovery across runs) with PhotoSahi source unchanged at 0a36116"
+  "verified": "383/383 unit tests pass; PhotoSahi real acceptance ran the previously-denied instruction with npm run test:unit at 126 pass / 0 fail, no permission dialog, no PhotoSahi file changed, HEAD still 0a36116, audit rows under policy_rule=turn_grant, grant expired; real hook allows Skill(dogbuild) and denies arbitrary skills"
 }

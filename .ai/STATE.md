@@ -5,7 +5,7 @@
 - **Schema version:** 1.0.0
 - **PSK id:** `e29a3a07-7a2c-4f9d-a44c-127e30fd89be`
 - **Repo root:** `/Users/mantoshkumar/Desktop/project/project-state-keeper`
-- **State updated:** 2026-07-28T03:11:49Z
+- **State updated:** 2026-07-28T03:42:48Z
 
 ## Objective
 
@@ -22,9 +22,9 @@ Reviewer policy + full exception handling slice
 ## Git state (as last captured)
 
 - **Branch:** `main`
-- **HEAD:** `3ec9727c51b63f4301c1ee5115ac579a6637c102`
+- **HEAD:** `f0d6c712079a469d1dd1e00cfe020b233d3240b7`
 - **Worktree:** clean
-- **Captured:** 2026-07-28T03:11:49Z
+- **Captured:** 2026-07-28T03:42:48Z
 
 ## Requested items
 
@@ -217,4 +217,20 @@ Reviewer policy + full exception handling slice
   - Turns are strictly sequential — no simultaneous side-channel input while Claude is working.
   - Print-mode turns cannot show Claude's interactive permission prompt; a blocked tool call is denied rather than escalated in-line.
   - Commercial demand and payment for DogBuild remain unvalidated.
+
+### 2026-07-28T03:42:48Z — Fixed the three defects the real-terminal PhotoSahi acceptance exposed: turn-scoped owner authorization, the DogBuild skill tool, and stale plain-English orientation.
+
+- Implemented:
+  - psk/governor/turngrant.py: turn-scoped owner grant — repository/HEAD/epoch/one-turn bound, repository_read + tests_and_builds only, conservative eligibility, expires after the turn and is swept at shell start and exit
+  - broker enforces the grant directly: allows read + existing tests, denies edits/commits/dependencies/network/secrets/out-of-repo/outward-facing itself rather than falling through
+  - broker allows Skill only for exactly dogbuild, when installed and identity is valid; arbitrary skills denied; audited as read-only
+  - classifier: read-only git plumbing (rev-parse, describe, blame, shortlog, ls-files, read-only remote) is tier 0
+  - brief.py: order of truth applied — a checkpoint at an older commit can no longer supply current evidence; a declaration at the live HEAD wins; stale checkpoint demoted to a labelled historical note plus a warning
+  - brief.py: no active plan + idle autonomy reports Current task: None / Next step: No task selected / pending-next-milestone, without touching the Goal Contract
+  - audit records policy_rule=turn_grant with the grant id on both allows and denies
+- Next safe action: Await ChatGPT review of the three defect fixes. Do not begin another slice, push, or publish.
+- Unresolved risks:
+  - PhotoSahi's ledger still records git_state 5a160ca with 7 reviewer conditions open; the orientation no longer presents it as current, but the closeout itself is an owner decision and was not performed.
+  - Turn-grant eligibility is a keyword classifier; a safe instruction phrased unusually will simply get no grant (fails closed, but the owner must rephrase).
+  - Automatic ChatGPT transport remains deferred; commercial demand and payment remain unvalidated.
 
