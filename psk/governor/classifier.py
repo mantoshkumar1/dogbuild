@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from .parser import split_all_segments
 from .policy import ActionLevel, ExecutionPolicy
 
 
@@ -93,7 +94,11 @@ _TIER2_PATTERNS = [
 # Tier 1: reversible local
 _TIER1_PATTERNS = [
     re.compile(r"\bnpm\s+(test|run)\b"),
-    re.compile(r"\bpython\s+-m\s+(unittest|pytest)\b"),
+    # Anchored to the start of a segment, which normalize_interpreter has
+    # already canonicalized. Unanchored, a token such as
+    # `--interpreter=/usr/bin/python3 -m pytest` read as an ordinary test run;
+    # the spelling alternatives remain as a backstop if normalization misses.
+    re.compile(r"^(?:python[0-9.]*|py)\s+-m\s+(unittest|pytest)\b"),
     re.compile(r"\bjest\b"),
     re.compile(r"\bmocha\b"),
     re.compile(r"\bmake\b"),
@@ -105,22 +110,107 @@ _TIER1_PATTERNS = [
     re.compile(r"\bgit\s+branch\s+(?!-)\S+"),
 ]
 
-# Tier 0: read-only
+# Tier 0: read-only.
+#
+# These are anchored to the start of a command segment. An unanchored word
+# match let any command inherit Tier 0 from an unrelated fragment: both a
+# trailing `| tail` and an argument such as `--out find.txt` were enough to
+# turn an unrecognized command into "read-only".
 _TIER0_PATTERNS = [
-    re.compile(r"\bgit\s+(status|diff|log|show|branch\s*$)\b"),
+    re.compile(r"^git\s+(status|diff|log|show|branch\s*$)\b"),
     re.compile(
-        r"\bgit\s+branch"
+        r"^git\s+branch"
         r"(?:\s+(?:-a|-r|-v|-vv|--all|--remotes|--verbose|--list|"
         r"--show-current|--no-color|--color(?:=(?:always|never|auto))?))*\s*$"
     ),
     # Inspection-only plumbing. None of these match an earlier tier, so they
     # would otherwise fall through to the conservative unknown-command default.
-    re.compile(r"\bgit\s+(rev-parse|describe|blame|shortlog|ls-files|"
+    re.compile(r"^git\s+(rev-parse|describe|blame|shortlog|ls-files|"
                r"ls-tree|cat-file|symbolic-ref|config\s+--get)\b"),
     # `git remote` only in its read-only forms — never add/remove/set-url.
-    re.compile(r"\bgit\s+remote\s*(-v|--verbose|show\b|get-url\b)?\s*$"),
-    re.compile(r"\b(cat|head|tail|less|more|wc|grep|rg|find|fd|ls|tree|pwd|echo)\b"),
+    re.compile(r"^git\s+remote\s*(-v|--verbose|show\b|get-url\b)?\s*$"),
+    re.compile(r"^(cat|head|tail|less|more|wc|grep|rg|find|fd|ls|tree|pwd|echo)\b"),
 ]
+
+# --- Interpreter normalization -------------------------------------- #
+#
+# Classification must not depend on how an interpreter happens to be spelled.
+# `python3 -m pytest` reading differently from `python -m pytest` is what let a
+# test run escape Tier 1 in the first place.
+
+# Leading `VAR=value ` assignments.
+_ENV_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S*\s+")
+# A directory prefix. Deliberately path-shaped rather than `\S*/`: any
+# non-space run would let a token such as `--interpreter=/usr/bin/python3`
+# induce normalization and be read as an ordinary test run.
+_PATH_PREFIX = r"(?:[\w.\-~/]*/)?"
+# An `env` / `/usr/bin/env` launcher prefix.
+_ENV_LAUNCHER = re.compile(rf"^{_PATH_PREFIX}env\s+")
+# `env` options that do not change how the remaining words are parsed, so the
+# interpreter after them is still the interpreter. `-S`/`--split-string` is
+# deliberately absent: it re-splits the rest of the line, so a command using it
+# is left unnormalized and falls through to the conservative default.
+_ENV_OPTION_WITH_VALUE = re.compile(r"^(?:-u|-C)\s+\S+\s+")
+_ENV_OPTION_INLINE = re.compile(
+    r"^(?:--unset=\S+|--chdir=\S+|--ignore-environment|-i|-)\s+"
+)
+# A Python interpreter token: optional path, optional version, optional .exe.
+_INTERPRETER = re.compile(
+    rf"^{_PATH_PREFIX}(?:python[0-9.]*|py)(?:\.exe)?(?=\s|$)"
+)
+
+
+def _strip_env_assignments(text: str) -> str:
+    while True:
+        stripped = _ENV_ASSIGNMENT.sub("", text)
+        if stripped == text:
+            return text
+        text = stripped
+
+
+def normalize_interpreter(cmd: str) -> str:
+    """Rewrite a Python interpreter invocation to a canonical `python …`.
+
+    Handles `python`, `python3`, versioned forms like `python3.13`, absolute
+    and relative interpreter paths, `python.exe`, `py`, leading `VAR=value`
+    assignments, and `env` / `/usr/bin/env` launcher forms including the
+    options that leave the following words intact (`-i`, `-u NAME`, `-C DIR`
+    and their long spellings). `env -S` is not normalized, because it re-splits
+    the rest of the line.
+
+    This affects classification only. The command that actually executes, and
+    the command recorded in the audit trail, are never rewritten.
+    """
+    text = _strip_env_assignments(cmd.strip())
+
+    launcher = _ENV_LAUNCHER.match(text)
+    if launcher:
+        text = text[launcher.end():]
+        # `env` accepts options and assignments in any order before the command.
+        while True:
+            before = text
+            text = _strip_env_assignments(text)
+            option = (_ENV_OPTION_WITH_VALUE.match(text)
+                      or _ENV_OPTION_INLINE.match(text))
+            if option:
+                text = text[option.end():]
+            if text == before:
+                break
+
+    match = _INTERPRETER.match(text)
+    if not match:
+        return cmd.strip()
+    return "python" + text[match.end():]
+
+
+# Ordering used to pick the riskiest stage of a compound command.
+_TIER_RANK = {
+    RiskTier.TIER_0_READ_ONLY: 0,
+    RiskTier.TIER_1_REVERSIBLE: 1,
+    RiskTier.TIER_2_MATERIAL: 2,
+    RiskTier.TIER_3_HIGH_RISK: 3,
+    RiskTier.TIER_4_EXTERNAL: 4,
+}
 
 # Network tools
 _NETWORK_CMDS = re.compile(r"\b(curl|wget|http|fetch)\b")
@@ -146,12 +236,40 @@ _PAID_API_DOMAINS = frozenset({
 
 
 def classify_command(cmd: str, policy: Optional[ExecutionPolicy] = None) -> ActionClassification:
-    """Classify a single shell command string.
+    """Classify a shell command, compound commands included.
+
+    A compound command is classified by its riskiest stage. The whole string is
+    always classified too, so cross-stage patterns such as `curl ... | sh` keep
+    their Tier 3 reading; the result is the highest tier of the two views, which
+    means this can only ever escalate, never soften, an earlier decision.
+    """
+    stripped = cmd.strip()
+    worst = _classify_segment(stripped, policy)
+
+    segments = split_all_segments(stripped)
+    if len(segments) <= 1:
+        return worst
+
+    for segment in segments:
+        cls = _classify_segment(segment, policy)
+        if _TIER_RANK[cls.tier] > _TIER_RANK[worst.tier]:
+            worst = cls
+            worst.reasons.append(
+                f"compound command classified by its riskiest stage: {segment}"
+            )
+
+    return worst
+
+
+def _classify_segment(cmd: str, policy: Optional[ExecutionPolicy] = None) -> ActionClassification:
+    """Classify one atomic command segment.
 
     Returns an ActionClassification with tier, action_class, and reasons.
     """
-    cmd_stripped = cmd.strip()
+    cmd_stripped = normalize_interpreter(cmd)
     reasons: List[str] = []
+    if cmd_stripped != cmd.strip():
+        reasons.append(f"interpreter normalized for classification: {cmd_stripped}")
 
     # Check Tier 4 first (highest risk)
     for pat in _TIER4_PATTERNS:

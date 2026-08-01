@@ -151,6 +151,91 @@ def parse_compound(command: str) -> NormalizedPlan:
     return plan
 
 
+def split_all_segments(cmd: str) -> List[str]:
+    """Split on every separator that begins a new command, respecting quotes.
+
+    Covers newline, `;`, `&&`, `||`, `|`, and a backgrounding `&`.
+    :func:`_safe_split` deliberately keeps a pipeline together as one action;
+    classification needs the opposite, because a risky stage must never hide
+    behind a read-only one. Every separator has to be covered: a first stage of
+    `git status` followed by a newline was enough to authorize what came next.
+
+    A redirect such as `2>&1` is not a separator, so `&` only splits when the
+    preceding non-space character is not `>`.
+    """
+    parts: List[str] = []
+    current: List[str] = []
+    in_single = False
+    in_double = False
+    prev_nonspace = ""
+    i = 0
+
+    def flush() -> None:
+        parts.append("".join(current))
+        current.clear()
+
+    while i < len(cmd):
+        c = cmd[i]
+
+        # A backslash escapes the next character. Without this a `\"` inside a
+        # double-quoted string flipped the quote state off, so later pipes read
+        # as separators and a read-only command was split into fragments that
+        # classified as unknown. Backslashes are literal inside single quotes,
+        # where the shell does not honour them either.
+        if c == "\\" and not in_single and i + 1 < len(cmd):
+            current.append(c)
+            current.append(cmd[i + 1])
+            i += 2
+            continue
+
+        if c == "'" and not in_double:
+            in_single = not in_single
+            current.append(c)
+            i += 1
+            continue
+
+        if c == '"' and not in_single:
+            in_double = not in_double
+            current.append(c)
+            i += 1
+            continue
+
+        if in_single or in_double:
+            current.append(c)
+            i += 1
+            continue
+
+        if cmd[i:i + 2] in ("&&", "||"):
+            flush()
+            prev_nonspace = ""
+            i += 2
+            continue
+
+        if c in ";\n|":
+            flush()
+            prev_nonspace = ""
+            i += 1
+            continue
+
+        # `&` backgrounds a command, but it is part of a redirect in both
+        # `2>&1` (preceded by `>`) and `&>out.txt` (followed by `>`).
+        if c == "&" and prev_nonspace != ">" and cmd[i + 1:i + 2] != ">":
+            flush()
+            prev_nonspace = ""
+            i += 1
+            continue
+
+        current.append(c)
+        if not c.isspace():
+            prev_nonspace = c
+        i += 1
+
+    if current:
+        flush()
+
+    return [s.strip() for s in parts if s.strip()]
+
+
 def _safe_split(cmd: str) -> List[str]:
     """Split a command on ;, &&, || while respecting quotes.
 
