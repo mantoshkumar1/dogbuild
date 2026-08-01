@@ -9,10 +9,10 @@
   "display_name": "DogBuild",
   "parent_system": {
     "name": "Revenue Opportunity Lab",
-    "record": "~/Desktop/project/revenue-opportunity-lab/projects/project-state-keeper.md"
+    "record": "https://github.com/mantoshkumar1/revenue-opportunity-lab/blob/b19dfa93dbfe45a2dd82e16db8cde723bdaac017/projects/project-state-keeper.md"
   },
   "project_id": "d5c235a5-2c97-44d0-b3cb-a868bdf4fadd",
-  "remote_fingerprint": null,
+  "remote_fingerprint": "75b29b4658b00abfe44a6fc82e6cbbe427c662670888e54b5357216878845149",
   "repository_id": "66b750b4-7513-4643-ad59-43f9c8f19f61",
   "repository_name": "dogbuild",
   "root_path": "/Users/mantoshkumar/Desktop/project/dogbuild",

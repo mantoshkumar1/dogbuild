@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from psk import context, core, gitutil, identity, registry
+from psk.errors import ValidationError
 from tests._helpers import cleanup, git, make_repo
 
 
@@ -42,6 +43,37 @@ class TestIdentity(unittest.TestCase):
         self.addCleanup(cleanup, d)
         ident = identity.ensure_identity(gitutil.repo_root(d))
         self.assertIsNone(ident.remote_fingerprint)
+
+    def test_upstream_source_requires_name_and_record(self):
+        d = make_repo(with_commit=True)
+        self.addCleanup(cleanup, d)
+        root = gitutil.repo_root(d)
+        with self.assertRaises(ValidationError):
+            identity.ensure_identity(root, parent_name="Opportunity Lab")
+        with self.assertRaises(ValidationError):
+            identity.ensure_identity(root, parent_record="https://example.test/record")
+
+    def test_explicit_upstream_source_can_be_added_to_existing_identity(self):
+        d = make_repo(with_commit=True)
+        self.addCleanup(cleanup, d)
+        root = gitutil.repo_root(d)
+        original = identity.ensure_identity(root)
+        self.assertIsNone(original.parent_system)
+
+        updated = identity.ensure_identity(
+            root,
+            parent_name="Opportunity Lab",
+            parent_record="https://example.test/versioned-record",
+        )
+        self.assertEqual(
+            updated.parent_system,
+            {
+                "name": "Opportunity Lab",
+                "record": "https://example.test/versioned-record",
+            },
+        )
+        self.assertEqual(updated.project_id, original.project_id)
+        self.assertEqual(updated.repository_id, original.repository_id)
 
 
 class TestRegistry(unittest.TestCase):

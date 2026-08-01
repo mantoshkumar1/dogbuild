@@ -1,9 +1,10 @@
-# Founder policy (specification — REQUIRED FUTURE SYNC, not yet implemented)
+# Founder policy (versioned snapshot; enforcement not yet implemented)
 
-DogBuild must eventually enforce the founder's binding commercial constraints, whose
-**canonical source** is the Revenue Opportunity Lab file
-`FOUNDER_KNOWLEDGE_CONTRACT.md`
-(`~/Desktop/project/revenue-opportunity-lab/FOUNDER_KNOWLEDGE_CONTRACT.md`).
+DogBuild must eventually enforce the founder's binding commercial constraints.
+Their upstream decision source is the private Revenue Opportunity Lab. The
+versioned DogBuild-owned snapshot is
+[`product-governance-source.md`](product-governance-source.md); runtime behavior
+must never depend on the Lab being present on the local machine.
 
 **Status: NOT implemented.** DogBuild's machine-readable Goal Contract does not yet
 carry founder-policy fields. This document records the requirement so it is not

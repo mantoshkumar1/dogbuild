@@ -15,9 +15,11 @@ authority gate, and interrupts the human only on real exceptions.
 - **Framing:** built because the founder already needs it. Selling it is a
   **hypothesis to test later** — payment, demand, pricing, and distribution are
   **explicitly unvalidated** (see [`docs/commercial-assumptions.md`](docs/commercial-assumptions.md)).
-- Product source of truth: the existing DogBuild record in
-  `revenue-opportunity-lab` (`ideas/active/project-state-keeper.md`), refined by
-  the docs here. The Lab filename retains its historical slug.
+- DogBuild's product activation and commercial constraints originated in the
+  private Revenue Opportunity Lab. DogBuild owns its implementation and runtime
+  truth. See [`docs/governance-boundaries.md`](docs/governance-boundaries.md) and
+  the versioned [`docs/product-governance-source.md`](docs/product-governance-source.md)
+  snapshot.
 
 ## Quickstart
 
@@ -77,6 +79,11 @@ dogbuild start --permission-mode acceptEdits
 ```
 
 `statekeeper …`, `psk …`, and `dogbuild …` remain interchangeable.
+
+Initialization is independent by default. An upstream product or governance
+record is optional and must be supplied explicitly with `--source-name` and
+`--source-record`; DogBuild never injects the founder's private Lab into another
+user's repository.
 
 ### Built-in commands
 

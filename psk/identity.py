@@ -107,6 +107,15 @@ def ensure_identity(root: str, *, display_name: Optional[str] = None,
                     parent_record: Optional[str] = None) -> ProjectIdentity:
     """Create the identity file if absent; otherwise refresh mutable, non-identity
     fields (root_path, updated_at) so identity survives repository moves."""
+    if bool(parent_name) != bool(parent_record):
+        raise ValidationError(
+            "upstream source metadata requires both a name and a record"
+        )
+    requested_parent = (
+        {"name": parent_name, "record": parent_record}
+        if parent_name and parent_record
+        else None
+    )
     repo_name = os.path.basename(os.path.normpath(root))
     if identity_exists(root):
         ident = load_identity(root)
@@ -119,15 +128,15 @@ def ensure_identity(root: str, *, display_name: Optional[str] = None,
             if merged != ident.aliases:
                 ident.aliases = merged
                 changed = True
+        if requested_parent and ident.parent_system != requested_parent:
+            ident.parent_system = requested_parent
+            changed = True
         if changed:
             ident.updated_at = now_iso()
             _save(root, ident)
         return ident
 
     ts = now_iso()
-    parent = None
-    if parent_name or parent_record:
-        parent = {"name": parent_name, "record": parent_record}
     ident = ProjectIdentity(
         schema_version=IDENTITY_SCHEMA_VERSION,
         project_id=new_uuid(),
@@ -137,7 +146,7 @@ def ensure_identity(root: str, *, display_name: Optional[str] = None,
         root_path=root,
         remote_fingerprint=_remote_fingerprint(root),
         aliases=sorted(set(aliases or [])),
-        parent_system=parent,
+        parent_system=requested_parent,
         created_at=ts,
         updated_at=ts,
     )

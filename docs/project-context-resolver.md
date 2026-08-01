@@ -26,8 +26,8 @@ Every initialized repository has a persistent identity file:
   "remote_fingerprint": null,
   "aliases": ["PSK", "statekeeper", "project state keeper"],
   "parent_system": {
-    "name": "Revenue Opportunity Lab",
-    "record": "~/Desktop/project/revenue-opportunity-lab/projects/project-state-keeper.md"
+    "name": "Optional upstream product system",
+    "record": "https://example.test/versioned-product-record"
   },
   "created_at": "ISO-8601",
   "updated_at": "ISO-8601"
@@ -39,6 +39,8 @@ Requirements:
 - **Authenticated remote URLs must never be stored** — only a `remote_fingerprint`
   (a hash of the sanitized remote), or `null`.
 - Aliases are explicit and editable.
+- `parent_system` is optional, explicit source metadata. Ordinary repositories
+  do not inherit DogBuild's own product-incubation source.
 - Every checkpoint, handoff, review request, and review decision **must carry the
   project and repository IDs.**
 

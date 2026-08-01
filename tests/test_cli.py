@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from psk import __main__ as cli
-from psk import exit_codes, gitutil, registry
+from psk import exit_codes, gitutil, identity, registry
 from tests._helpers import cleanup, make_repo
 
 
@@ -46,6 +46,26 @@ class TestCLI(unittest.TestCase):
         data = json.loads(out)
         self.assertIn("project_id", data)
         self.assertEqual(data["freshness"], "current")
+
+    def test_init_does_not_inherit_private_product_source(self):
+        code, _ = run(["init", self.root, "--objective", "obj"])
+        self.assertEqual(code, exit_codes.SUCCESS)
+        self.assertIsNone(identity.load_identity(self.root).parent_system)
+
+    def test_init_accepts_explicit_product_source(self):
+        code, _ = run([
+            "init", self.root,
+            "--source-name", "Opportunity Lab",
+            "--source-record", "https://example.test/opportunity-record",
+        ])
+        self.assertEqual(code, exit_codes.SUCCESS)
+        self.assertEqual(
+            identity.load_identity(self.root).parent_system,
+            {
+                "name": "Opportunity Lab",
+                "record": "https://example.test/opportunity-record",
+            },
+        )
 
     def test_context_identify_and_list(self):
         run(["init", self.root])

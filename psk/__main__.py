@@ -51,10 +51,6 @@ from .exit_codes import (
 )
 from .projection import render_markdown
 
-PARENT_NAME = "Revenue Opportunity Lab"
-PARENT_RECORD = "~/Desktop/project/revenue-opportunity-lab/projects/project-state-keeper.md"
-
-
 def _emit(obj_human: str, obj_json, as_json: bool) -> None:
     if as_json:
         print(json.dumps(obj_json, indent=2, sort_keys=True))
@@ -69,7 +65,7 @@ def _cmd_init(args) -> int:
     state = core.initialize(
         args.path, objective=args.objective, force=args.force,
         display_name=args.name, aliases=args.alias or None,
-        parent_name=PARENT_NAME, parent_record=PARENT_RECORD,
+        parent_name=args.source_name, parent_record=args.source_record,
     )
     ident = identity_mod.load_identity(state.identity.root)
     registry.register(ident, branch=state.git_state.branch,
@@ -128,7 +124,7 @@ def _cmd_ctx_register(args) -> int:
     root = gitutil.repo_root(args.path)
     ident = identity_mod.ensure_identity(
         root, display_name=args.name, aliases=args.alias or None,
-        parent_name=PARENT_NAME, parent_record=PARENT_RECORD,
+        parent_name=args.source_name, parent_record=args.source_record,
     )
     git = gitutil.capture_git_state(root)
     registry.register(ident, branch=git["branch"], head=git["head_commit"])
@@ -676,6 +672,10 @@ def _build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--objective", default=None)
     pi.add_argument("--name", default=None, help="display name")
     pi.add_argument("--alias", action="append", help="repeatable alias")
+    pi.add_argument("--source-name", default=None,
+                    help="optional upstream product/governance source name")
+    pi.add_argument("--source-record", default=None,
+                    help="optional upstream source record path or URL")
     pi.add_argument("--force", action="store_true")
     pi.add_argument("--json", action="store_true")
     pi.set_defaults(func=_cmd_init)
@@ -710,6 +710,10 @@ def _build_parser() -> argparse.ArgumentParser:
     cr.add_argument("path", nargs="?", default=".")
     cr.add_argument("--name", default=None)
     cr.add_argument("--alias", action="append")
+    cr.add_argument("--source-name", default=None,
+                    help="optional upstream product/governance source name")
+    cr.add_argument("--source-record", default=None,
+                    help="optional upstream source record path or URL")
     cr.add_argument("--json", action="store_true")
     cr.set_defaults(func=_cmd_ctx_register)
 
