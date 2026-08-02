@@ -34,6 +34,79 @@ from .governor import turngrant as turngrant_mod
 PROMPT = "dogBuild>"
 PROMPT_STRING = PROMPT + " "
 
+# Brackets a delegated response.
+#
+# Founder evidence: in a crowded terminal there was no reliable way to see
+# where DogBuild's delegated answer started. Everything else the shell prints
+# is short and sits directly under the prompt — built-in answers, state
+# answers, indented progress notes — but a delegated answer can arrive after
+# pages of tool output, with nothing to separate it from that noise.
+#
+# The response is bracketed rather than just headed, so its end is as findable
+# as its start, and blank lines hold the working indicator above and the next
+# prompt below off the rules.
+#
+# Both boundaries carry a plain-text label. A bare rule shows *that* something
+# changed but not *what*, and an unlabelled closing rule is indistinguishable
+# from a divider inside the response itself. The words carry the meaning, so
+# the interface stays clear with no colour, no styling, and no box-drawing
+# support beyond what the working indicator already assumes.
+DELEGATED_RESPONSE_WIDTH = 60
+
+
+def _rule(label: str, width: int = DELEGATED_RESPONSE_WIDTH) -> str:
+    """A full-width rule carrying a plain-text label."""
+    opening = f"── {label} "
+    return opening + "─" * max(3, width - len(opening))
+
+
+DELEGATED_RESPONSE_LABEL = "dogBuild response"
+DELEGATED_RESPONSE_END_LABEL = "end of dogBuild response"
+DELEGATED_RESPONSE_HEADER = _rule(DELEGATED_RESPONSE_LABEL)
+DELEGATED_RESPONSE_FOOTER = _rule(DELEGATED_RESPONSE_END_LABEL)
+
+
+# Marks a response line that would otherwise read as a real boundary. Plain
+# text, so it survives a monochrome terminal, a pipe, and a log file.
+QUOTED_LINE_PREFIX = "[quoted] "
+
+
+def _is_boundary_shaped(line: str) -> bool:
+    """True if *line* could be mistaken for one of the real boundaries."""
+    stripped = line.strip()
+    if stripped in (DELEGATED_RESPONSE_HEADER, DELEGATED_RESPONSE_FOOTER):
+        return True
+    # Padding variants read as a boundary to the eye even when they would not
+    # match an exact search.
+    return (stripped.startswith(f"── {DELEGATED_RESPONSE_LABEL}")
+            or stripped.startswith(f"── {DELEGATED_RESPONSE_END_LABEL}"))
+
+
+def escape_boundary_lines(text: str) -> str:
+    """Prefix response lines that are shaped like a real boundary.
+
+    The boundaries themselves stay fixed, so they remain predictable and
+    greppable in a scrollback log; it is the impostor lines that move. This
+    happens whenever DogBuild is asked to explain or document its own terminal
+    format, which is exactly when the owner most needs the real boundaries to
+    be unambiguous.
+
+    Ordinary content is returned unchanged, byte for byte. Only a line that
+    could be read as a boundary is touched, and it is only ever prefixed —
+    never rewritten, truncated, or reordered.
+    """
+    lines = text.splitlines()
+    if not any(_is_boundary_shaped(line) for line in lines):
+        return text
+    return "\n".join(
+        QUOTED_LINE_PREFIX + line if _is_boundary_shaped(line) else line
+        for line in lines
+    )
+
+# One line, emitted once per delegated turn, so the owner never has to work out
+# which of several indicators belongs to the answer in front of them.
+WORKING_INDICATOR = "  … Claude Code is working (DogBuild is the interface)."
+
 # Per-repository session pointer, so a later `dogbuild start` can resume the
 # same underlying Claude conversation instead of starting cold.
 SESSION_FILE = "dogbuild_session.json"
@@ -472,6 +545,25 @@ class DogBuildShell:
             self.say(text)
         self.say("")
 
+    def _respond_delegated(self, text: str) -> None:
+        """Emit a delegated response bracketed by visible rules.
+
+        Separated on all three sides the owner has to read past: a blank line
+        holds the working indicator and any earlier output above the opening
+        rule, and a second blank line holds the next prompt below the closing
+        rule.
+
+        Only delegated answers are bracketed. Built-in and state answers are
+        printed immediately under the prompt the owner just typed, so they are
+        already easy to locate and rules around them would only add noise.
+        """
+        self.say("")
+        self.say(DELEGATED_RESPONSE_HEADER)
+        if text:
+            self.say(escape_boundary_lines(text))
+        self.say(DELEGATED_RESPONSE_FOOTER)
+        self.say("")
+
     def _claude_message(self, owner_message: str) -> str:
         """Attach fresh repository truth to every Claude turn.
 
@@ -625,18 +717,21 @@ class DogBuildShell:
         # created here and destroyed in the finally below — never reused.
         grant = self._open_turn_grant(text)
 
-        self.say("  … Claude Code is working (DogBuild is the interface).")
+        self.say(WORKING_INDICATOR)
         try:
             ok, response = self.claude.send(self._claude_message(text))
         except KeyboardInterrupt:
-            self._respond("  (interrupted — nothing further was sent)")
+            # Bracketed like any other outcome of a delegated turn: an
+            # interrupt arrives after the same wall of tool output, so it needs
+            # the same boundaries to be findable.
+            self._respond_delegated("  (interrupted — nothing further was sent)")
             return True
         finally:
             self._close_turn_grant(grant)
 
         if ok:
             save_session(self.root, self.claude.session_id, self.claude.turns)
-        self._respond(response or "(no output)")
+        self._respond_delegated(response or "(no output)")
         return True
 
     # -- turn-scoped owner authorization -------------------------------- #

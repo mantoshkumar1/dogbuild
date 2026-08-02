@@ -117,6 +117,329 @@ class TestPromptLoop(ShellRepoCase):
 
 
 # ------------------------------------------------------------------ #
+# Delegated-response marker
+# ------------------------------------------------------------------ #
+
+class TestDelegatedResponseMarker(ShellRepoCase):
+    """Founder evidence: the start of a delegated answer was unfindable.
+
+    In a crowded terminal a delegated response can arrive after pages of tool
+    output, so it needs a visible start marker. Built-in and state answers sit
+    directly under the prompt and must stay unmarked.
+    """
+
+    def test_delegated_response_is_preceded_by_the_marker(self):
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        self.assertIn(shell.DELEGATED_RESPONSE_HEADER, out)
+
+    def test_marker_comes_immediately_before_the_response(self):
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        index = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        self.assertEqual(out[index + 1], sh.claude.reply)
+
+    def test_marker_identifies_the_product(self):
+        self.assertIn("dogBuild", shell.DELEGATED_RESPONSE_HEADER)
+
+    def test_both_boundaries_are_labelled_in_plain_text(self):
+        """Clarity must not depend on colour, styling, or glyph rendering."""
+        self.assertIn("dogBuild response", shell.DELEGATED_RESPONSE_HEADER)
+        self.assertIn("end of dogBuild response", shell.DELEGATED_RESPONSE_FOOTER)
+        for rule in (shell.DELEGATED_RESPONSE_HEADER,
+                     shell.DELEGATED_RESPONSE_FOOTER):
+            self.assertNotIn("\x1b", rule, "boundary must carry no escape codes")
+
+    def test_a_delegated_turn_emits_no_ansi_escape_codes(self):
+        """Non-colour terminals must lose nothing.
+
+        The boundaries carry their meaning as words, so no styling is emitted
+        at all. That also keeps piped and logged output free of escape
+        sequences. `clear` deliberately emits a screen-wipe sequence, but that
+        is a screen control rather than styling and no delegated turn uses it.
+        """
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        for line in out:
+            self.assertNotIn("\x1b", line, f"escape code in: {line!r}")
+
+    def test_boundaries_are_findable_by_plain_substring_search(self):
+        """What the owner would grep for in a captured terminal log."""
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        transcript = "\n".join(out)
+        self.assertIn("dogBuild response", transcript)
+        self.assertIn("end of dogBuild response", transcript)
+
+    def test_exactly_one_working_indicator_per_delegated_turn(self):
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        self.assertEqual(out.count(shell.WORKING_INDICATOR), 1)
+
+    def test_one_indicator_per_turn_across_several_turns(self):
+        """Exactly one per delegated turn — not one per session, not two."""
+        sh, out = self.make_shell(lines=["do some work", "do more work", "exit"])
+        sh.run()
+        self.assertEqual(out.count(shell.WORKING_INDICATOR), 2)
+
+    def test_one_indicator_on_a_failed_turn(self):
+        class Failing(FakeClaude):
+            def send(self, message):
+                return False, "Claude Code exited with an error"
+
+        sh, out = self.make_shell(claude=Failing(), lines=["do some work", "exit"])
+        sh.run()
+        self.assertEqual(out.count(shell.WORKING_INDICATOR), 1)
+
+    def test_one_indicator_on_an_interrupted_turn(self):
+        class Interrupted(FakeClaude):
+            def send(self, message):
+                raise KeyboardInterrupt
+
+        sh, out = self.make_shell(claude=Interrupted(),
+                                  lines=["do some work", "exit"])
+        sh.run()
+        self.assertEqual(out.count(shell.WORKING_INDICATOR), 1)
+
+    def test_no_working_indicator_without_delegation(self):
+        sh, out = self.make_shell(lines=["status", "what's happening?", "exit"])
+        sh.run()
+        self.assertEqual(out.count(shell.WORKING_INDICATOR), 0)
+
+    def test_response_is_closed_by_a_matching_rule(self):
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        index = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        self.assertEqual(out[index + 2], shell.DELEGATED_RESPONSE_FOOTER)
+        self.assertEqual(len(shell.DELEGATED_RESPONSE_FOOTER),
+                         len(shell.DELEGATED_RESPONSE_HEADER))
+
+    def test_a_blank_line_separates_the_working_indicator_from_the_response(self):
+        """Requirement 2: the indicator must not run into the response."""
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        index = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        self.assertEqual(out[index - 1], "")
+        # The line above the blank is the working indicator, not the response.
+        self.assertIn("working", out[index - 2])
+
+    def test_a_blank_line_separates_the_response_from_the_next_prompt(self):
+        """Requirement 3: the next prompt must not abut the closing rule."""
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        footer = out.index(shell.DELEGATED_RESPONSE_FOOTER)
+        self.assertEqual(out[footer + 1], "")
+        self.assertEqual(out[footer + 2], shell.PROMPT_STRING)
+
+    def test_nothing_but_the_response_sits_inside_the_boundaries(self):
+        """No indicator, authorization notice, or audit line may leak inside.
+
+        The bracketed region is the delegated answer and nothing else, so the
+        owner can read or copy it without picking DogBuild's own bookkeeping
+        out of the middle.
+        """
+        sh, out = self.make_shell(lines=["do some work", "exit"])
+        sh.run()
+        header = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        footer = out.index(shell.DELEGATED_RESPONSE_FOOTER)
+        self.assertEqual(out[header + 1:footer], [sh.claude.reply])
+        self.assertNotIn(shell.WORKING_INDICATOR, out[header:footer + 1])
+
+    def test_a_failed_delegated_turn_is_bracketed(self):
+        """An error is an outcome too, and needs the same boundaries."""
+        class Failing(FakeClaude):
+            def send(self, message):
+                return False, "Claude Code exited with an error"
+
+        sh, out = self.make_shell(claude=Failing(), lines=["do some work", "exit"])
+        sh.run()
+        header = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        self.assertEqual(out[header + 1], "Claude Code exited with an error")
+        self.assertEqual(out[header + 2], shell.DELEGATED_RESPONSE_FOOTER)
+
+    def test_an_interrupted_turn_is_bracketed(self):
+        class Interrupted(FakeClaude):
+            def send(self, message):
+                raise KeyboardInterrupt
+
+        sh, out = self.make_shell(claude=Interrupted(),
+                                  lines=["do some work", "exit"])
+        sh.run()
+        header = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        self.assertIn("interrupted", out[header + 1])
+        self.assertEqual(out[header + 2], shell.DELEGATED_RESPONSE_FOOTER)
+
+    def test_a_response_containing_a_rule_does_not_confuse_the_boundaries(self):
+        """The owner must still find the real end of a response.
+
+        A delegated answer can legitimately contain a horizontal rule of its
+        own, so the closing boundary has to remain the last line, not the
+        first dashed line encountered.
+        """
+        class Ruled(FakeClaude):
+            def send(self, message):
+                return True, "before\n" + "-" * 60 + "\nafter"
+
+        sh, out = self.make_shell(claude=Ruled(), lines=["do some work", "exit"])
+        sh.run()
+        header = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        footer = out.index(shell.DELEGATED_RESPONSE_FOOTER)
+        self.assertLess(header, footer)
+        body = out[header + 1:footer]
+        self.assertIn("before", "\n".join(body))
+        self.assertIn("after", "\n".join(body))
+        self.assertNotIn(shell.DELEGATED_RESPONSE_FOOTER, body)
+
+    def test_the_prompt_always_returns_after_a_blank_line(self):
+        """Whatever the turn did, `dogBuild>` comes back on a fresh line.
+
+        Delegated, built-in and state answers take different paths out of
+        handle(), so prompt placement is asserted for each rather than for the
+        delegated path alone.
+        """
+        for line in ("do some work", "status", "what's happening?"):
+            sh, out = self.make_shell(lines=[line, "exit"])
+            sh.run()
+            prompts = [i for i, o in enumerate(out) if o == shell.PROMPT_STRING]
+            self.assertGreaterEqual(len(prompts), 2, line)
+            self.assertEqual(out[prompts[1] - 1], "",
+                             f"{line}: prompt did not return on a fresh line")
+
+    def test_the_prompt_returns_cleanly_after_a_failed_turn(self):
+        class Failing(FakeClaude):
+            def send(self, message):
+                return False, "Claude Code exited with an error"
+
+        sh, out = self.make_shell(claude=Failing(), lines=["do some work", "exit"])
+        sh.run()
+        prompts = [i for i, o in enumerate(out) if o == shell.PROMPT_STRING]
+        self.assertEqual(out[prompts[1] - 1], "")
+        self.assertEqual(out[prompts[1] - 2], shell.DELEGATED_RESPONSE_FOOTER)
+
+    def test_ordinary_content_is_returned_byte_for_byte(self):
+        """Only impostor lines may be touched; everything else is untouched."""
+        for text in ("ok", "a\nb\nc", "-" * 60, "── not a real boundary",
+                     "  indented\n\nblank line above", "trailing spaces   "):
+            self.assertEqual(shell.escape_boundary_lines(text), text, text)
+
+    def test_a_quoted_header_line_is_visibly_prefixed(self):
+        quoted = f"before\n{shell.DELEGATED_RESPONSE_HEADER}\nafter"
+        escaped = shell.escape_boundary_lines(quoted).splitlines()
+        self.assertEqual(escaped[0], "before")
+        self.assertEqual(escaped[1],
+                         shell.QUOTED_LINE_PREFIX + shell.DELEGATED_RESPONSE_HEADER)
+        self.assertEqual(escaped[2], "after")
+
+    def test_a_quoted_footer_line_is_visibly_prefixed(self):
+        quoted = f"before\n{shell.DELEGATED_RESPONSE_FOOTER}\nafter"
+        escaped = shell.escape_boundary_lines(quoted).splitlines()
+        self.assertEqual(escaped[1],
+                         shell.QUOTED_LINE_PREFIX + shell.DELEGATED_RESPONSE_FOOTER)
+
+    def test_padding_variants_are_also_escaped(self):
+        """A rule of a different width still reads as a boundary to the eye."""
+        for line in (f"── {shell.DELEGATED_RESPONSE_LABEL} ───",
+                     f"── {shell.DELEGATED_RESPONSE_END_LABEL} ─────────"):
+            escaped = shell.escape_boundary_lines(line)
+            self.assertTrue(escaped.startswith(shell.QUOTED_LINE_PREFIX), line)
+
+    def test_the_escape_prefix_is_plain_text(self):
+        self.assertNotIn("\x1b", shell.QUOTED_LINE_PREFIX)
+        self.assertTrue(shell.QUOTED_LINE_PREFIX.strip())
+
+    def test_escaping_is_idempotent_in_effect(self):
+        """An already-prefixed line is no longer boundary-shaped."""
+        once = shell.escape_boundary_lines(shell.DELEGATED_RESPONSE_HEADER)
+        self.assertEqual(shell.escape_boundary_lines(once), once)
+
+    def test_a_response_quoting_both_boundaries_is_still_unambiguous(self):
+        """Owner-review case: both rules appear as standalone response lines.
+
+        Asserted against the rendered transcript rather than the list of write
+        calls, because the terminal shows lines: a multi-line response is one
+        write but many lines, and it is the lines the owner scans.
+
+        Against the pre-fix code this fails. The emitted boundaries were the
+        same fixed strings the response quotes, so each appeared twice in the
+        transcript and neither the start nor the end of the answer could be
+        located.
+        """
+        quoted = "\n".join([
+            "intro",
+            shell.DELEGATED_RESPONSE_HEADER,
+            "middle",
+            shell.DELEGATED_RESPONSE_FOOTER,
+            "outro",
+        ])
+
+        class Quoting(FakeClaude):
+            def send(self, message):
+                return True, quoted
+
+        sh, out = self.make_shell(claude=Quoting(), lines=["do some work", "exit"])
+        sh.run()
+
+        transcript = "\n".join(out).splitlines()
+        header = shell.DELEGATED_RESPONSE_HEADER
+        footer = shell.DELEGATED_RESPONSE_FOOTER
+
+        # Exactly one real opening and one real closing boundary, and they are
+        # the fixed strings the owner can grep for.
+        self.assertEqual(transcript.count(header), 1, "start is ambiguous")
+        self.assertEqual(transcript.count(footer), 1, "end is ambiguous")
+
+        start = transcript.index(header)
+        end = transcript.index(footer)
+        self.assertLess(start, end)
+
+        # The response is intact between them, with only its impostor lines
+        # prefixed and every ordinary line untouched.
+        body = transcript[start + 1:end]
+        self.assertEqual(body, [
+            "intro",
+            shell.QUOTED_LINE_PREFIX + header,
+            "middle",
+            shell.QUOTED_LINE_PREFIX + footer,
+            "outro",
+        ])
+
+    def test_a_multi_line_response_stays_inside_the_rules(self):
+        class Chatty(FakeClaude):
+            def send(self, message):
+                return True, "line one\nline two\nline three"
+
+        sh, out = self.make_shell(claude=Chatty(), lines=["do some work", "exit"])
+        sh.run()
+        header = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        footer = out.index(shell.DELEGATED_RESPONSE_FOOTER)
+        self.assertLess(header, footer)
+        body = "\n".join(out[header + 1:footer])
+        self.assertIn("line one", body)
+        self.assertIn("line three", body)
+
+    def test_builtin_answers_are_not_marked(self):
+        for line in ("help", "status", "parked"):
+            sh, out = self.make_shell(lines=[line, "exit"])
+            sh.run()
+            self.assertNotIn(shell.DELEGATED_RESPONSE_HEADER, out, line)
+
+    def test_state_query_answers_are_not_marked(self):
+        sh, out = self.make_shell(lines=["what's happening?", "exit"])
+        sh.run()
+        self.assertNotIn(shell.DELEGATED_RESPONSE_HEADER, out)
+
+    def test_empty_delegated_response_is_still_marked(self):
+        class Silent(FakeClaude):
+            def send(self, message):
+                return True, ""
+
+        sh, out = self.make_shell(claude=Silent(), lines=["do some work", "exit"])
+        sh.run()
+        index = out.index(shell.DELEGATED_RESPONSE_HEADER)
+        self.assertEqual(out[index + 1], "(no output)")
+
+
+# ------------------------------------------------------------------ #
 # Banner
 # ------------------------------------------------------------------ #
 
