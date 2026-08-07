@@ -911,6 +911,213 @@
       "status": "parked",
       "timestamp": "2026-07-25T21:59:05Z",
       "title": "Build project forecasting now"
+    },
+    {
+      "id": "40593335-f088-4006-a68a-29339f678332",
+      "phase": "next",
+      "reason": "DogBuild failure observed 2026-08-01 on issue #2 at main @ 8575e3376bf9. The start hook is installed but no execution policy is active, so every tier-1+ action is denied: 'python -m pytest tests/ -q' -> 'no active policy; conservative denial for tests_and_builds' (audit deny tier_1_reversible). The only policy-creation CLI is 'governor policy seed', a hard-coded PhotoSahi demonstration fixture (task research-canadian-passport, branch codex/photosahi-phases-3-12), and 'governor decide' tells the user to run it. There is no way to authorize the real current task.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:35:59Z",
+      "title": "No CLI path to create a real execution policy"
+    },
+    {
+      "id": "e3b78fa4-3a60-4d8f-9116-b8fc5e01655b",
+      "phase": "next",
+      "reason": "DogBuild failure observed 2026-08-01 on issue #2. core.create_checkpoint exists in psk/core.py:199 but is never wired into psk/__main__.py; its only callers are tests. brief.py derives checkpoint_is_historical and 'dogbuild status' reports 'State freshness: stale' from checkpoints, so a session cannot clear staleness through any supported command. Canonical state can only be advanced by 'dogbuild declare'.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:36:09Z",
+      "title": "No CLI command records a checkpoint"
+    },
+    {
+      "id": "64977cf1-d834-4d7d-b703-6a8134794e0e",
+      "phase": "later",
+      "reason": "DogBuild failure observed 2026-08-01 on issue #2. 'sed -n 200,300p <file>' is read-only but the permission broker classified it repository_write / tier_2_material and denied it (audit 2026-08-01T20:33:49Z). Low impact because Read covers the same need, but the classifier should treat sed -n ...p without -i as tier 0.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:36:11Z",
+      "title": "Broker misclassifies read-only sed as a repository write"
+    },
+    {
+      "id": "dca9166b-3ad0-4fc6-97ec-fd49164f1388",
+      "phase": "next",
+      "reason": "DogBuild failure observed 2026-08-01 on issue #2. psk/brief.py:101 feeds a declaration's free-text 'verified' field straight into the projection's test-evidence slot, so where-am-i renders 'tests: <whatever the agent wrote>'. A declaration that verified only git state is presented as test evidence. Reproduced live: after a declare whose verified text described git state only, current_verified_state read 'tests: Live git evidence at main @ 8575e33..., tracked worktree clean'. Needs a real distinction between test evidence and other verification, which is a reviewer-level design decision, not a blocker fix.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:37:03Z",
+      "title": "Projection can assert test evidence that does not exist"
+    },
+    {
+      "id": "a34aecd0-a19a-42ba-9107-7472542e0f0e",
+      "phase": "next",
+      "reason": "DogBuild failure observed 2026-08-01 on issue #2, most serious found. Identical action, opposite decisions, recorded in .ai/execution_audit.jsonl: 'python -m pytest tests/ -q' -> deny, tier_1_reversible, tests_and_builds (20:33:33Z); 'python3 -m pytest tests/ -q' -> ALLOW, tier_0_read_only, 'read-only command (no policy loaded)' (20:37:15Z). The classifier recognizes the 'python' binary but not 'python3', so any 'python3 <script>' falls through to tier 0 and is auto-approved with no policy active, despite being able to write files, install packages, or reach the network. This is a governor correctness and safety hole, not an issue #2 blocker; it needs a reviewer decision and a regression test.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:38:02Z",
+      "title": "SECURITY: governor classifies python3 commands as read-only"
+    },
+    {
+      "id": "0459aa0d-618f-483d-91e4-af6d8e12bbb9",
+      "phase": "next",
+      "reason": "DogBuild failure observed 2026-08-01. The documented rule is that a MATERIAL_INSTRUCTION increments the instruction epoch and invalidates conflicting in-flight work. 'dogbuild input reconcile' instead reported outcome APPLIED_AS_FEEDBACK for a message recorded explicitly as --type MATERIAL_INSTRUCTION, and the epoch stayed at 1. Owner intent was correctly acted on by the session, but the machine record understates the instruction's authority.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:46:27Z",
+      "title": "Reconcile downgrades MATERIAL_INSTRUCTION to APPLIED_AS_FEEDBACK"
+    },
+    {
+      "id": "62bc3b19-ad22-4dc0-a8eb-1727979824a0",
+      "phase": "next",
+      "reason": "Found 2026-08-01 by running the full suite. tests/test_permission_broker.py::test_denied_fixtures_all_pass loads a policy, so every entry in broker.DENIED_TEST_FIXTURES must deny under ANY policy. The original eight were all tier 3/4 (push, rm -rf, secrets, paid API), so the invariant held implicitly and was never documented. Five fixtures added during the P0 work violate it: they only deny when no policy is loaded. Under the PhotoSahi seed policy, tests_and_builds is auto and repository_write is task_scoped, so 'python3 -m pytest ... | tail -15', 'python3 scripts/wipe.py | tail -5', 'git status<newline>some-unknown-binary', 'ls -la<newline>python3 scripts/wipe.py' and 'git status & some-unknown-binary' are all correctly allowed there. The classification invariant they were meant to protect is already covered by TestReadOnlyStageBypass in tests/test_execution_governor.py, which passes 9/9. Fix: keep only the policy-independent deny fixtures and document the invariant.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:54:58Z",
+      "title": "DENIED_TEST_FIXTURES must be policy-independent"
+    },
+    {
+      "id": "2629bbf1-4840-41f8-abf8-309063c8c5c6",
+      "phase": "now",
+      "reason": "Discovered 2026-08-01 while executing requirement 7; separate from issue #2, which is a state-reconciliation task. DogBuild has no primitive that authorizes a fix-and-verify loop. Evidence: under turn grant ee7fd009 (grant_kind read_and_verify, write_allowed false) the full suite ran successfully but an Edit was denied - 'the owner authorized one read-and-verify turn; edits are not covered by a turn-scoped grant'. The only other primitive is an execution policy, and the only creation CLI is 'governor policy seed', hard-coded to project photosahi, task research-canadian-passport, branch codex/photosahi-phases-3-12. Perverse consequence: broker.py:496 allows in-repository edits when NO grant and NO policy are active, so the least-authorized state is the only one in which an agent can fix and verify. Asking the owner for explicit verification authority strictly REDUCES capability. Fix requires one of: a 'governor policy create' bound to the live project/repository/branch/task, or a third grant kind (verify_and_repair) permitting scoped writes plus tests for one turn against an explicit path allowlist, bound to repo, HEAD and instruction epoch.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T20:56:03Z",
+      "title": "P0: no authorization state permits repository writes and test execution together"
+    },
+    {
+      "id": "728b90ce-0e77-40c1-9bc4-f14032c5c215",
+      "phase": "next",
+      "reason": "Found 2026-08-01 while hardening the Python interpreter pattern. The Tier 0 list was anchored during the P0 fix and the Tier 1 python pattern is now anchored too, but the other Tier 1 patterns still match anywhere in a segment: npm (test|run), jest, mocha, make, npm run build, git commit, git add. Because Tier 1 maps to action classes a policy can auto-approve (tests_and_builds, git_commit, repository_write), an unrecognized command containing one of those words as an argument can be read as a routine action - for example 'some-evil-binary --flag make' classifies as tests_and_builds. This is the same defect family as the original P0 but on the permissive side of Tier 1 rather than Tier 0. Not fixed here: anchoring all of them changes behaviour for several action classes and must not be done while the stdlib suite cannot be run. Needs its own change with the suite green before and after.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:17:03Z",
+      "title": "Remaining Tier 1 patterns are still unanchored"
+    },
+    {
+      "id": "0e250871-a15e-4a44-bdff-dfde3627a0b4",
+      "phase": "next",
+      "reason": "Observed 2026-08-01. The owner wrote 'This is explicit human authorization for one narrowly scoped turn to:' and DogBuild created no turn grant. turngrant.eligibility() matches only implicit patterns - an inspection verb or a run-the-tests phrase - and has no rule for a direct declaration of authority. The owner stating authorization in plain language therefore grants nothing, while an incidental phrase like 'summarize the result' grants a turn. Authority should be recognized when the owner declares it, with the scope read from the same message.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:17:53Z",
+      "title": "Explicit authorization language is not recognized"
+    },
+    {
+      "id": "2b8e10ab-bc4c-4f82-a10c-351aa82d11b6",
+      "phase": "later",
+      "reason": "Observed 2026-08-01, twice. Running 'python3 -m unittest discover -s tests -t .' ends by printing a DogBuild status card and 'Starting Claude (raw mode - no DogBuild shell, no governor)...' AFTER unittest's own summary, so 'tail' shows the banner instead of the Ran/OK line and the result has to be recovered with grep. Some test exercises the launcher print path against real state rather than a fixture. Nothing appears to actually spawn - the suite completes in about 53s - but test output should not emit launcher banners, and a card claiming a different commit in test output is a hazard for exactly the evidence discipline DogBuild is meant to enforce.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:21:12Z",
+      "title": "Test-suite output leaks a launcher banner over the summary"
+    },
+    {
+      "id": "1cc3d162-9c62-46b2-adeb-96a6d9b8456b",
+      "phase": "next",
+      "reason": "Observed 2026-08-01, high impact. psk/brief.py:32 _RESULT_SENTENCE matches only a digit immediately followed by pass/fail/passed/failed/passing/failing/error. This project's own runner prints 'Ran 427 tests' then 'OK', which the pattern cannot match, while 'previous baseline was 418 tests with 1 failure' matches on '1 failure'. _summarize_evidence therefore selected the single failure-shaped sentence and the one-line projection reported a fully green suite as '418 tests with 1 failure'. The bad line then propagated into the live context block presented to the next session as authoritative, which is exactly the stale-evidence failure the block warns against. Fix: teach _RESULT_SENTENCE the runner's real vocabulary (OK, FAILED, 'Ran N tests', 'N tests') and prefer the newest result sentence over the first match. Related to the earlier parked finding that the projection can assert test evidence that does not exist.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:23:02Z",
+      "title": "Projection cannot recognize a passing unittest result"
+    },
+    {
+      "id": "8fed2331-0389-4c58-b3af-54a53966a97a",
+      "phase": "now",
+      "reason": "Found 2026-08-01 by hitting it during normal use, in the uncommitted P0 change set. split_all_segments in psk/governor/parser.py tracks single and double quotes but has no backslash-escape handling, so a backslash-quote inside a quoted string toggles the quote state off. Pipes after that point are then read as separators and the tail of the string is split into fragments that classify as unknown, escalating a read-only command to tier_2_material. Reproduced live: a command of the form 'git diff FILE | grep -E \"...(A|command<backslash-quote>|B)\" | head -25' was denied with 'no active policy; conservative denial for repository_write' although every real stage is read-only. Direction is conservative, so it is over-blocking rather than a bypass, but it is a regression I introduced: before pipe splitting the whole string classified from its leading 'git diff' and was allowed. Pre-existing _safe_split has the same gap with a smaller blast radius. Fix: track backslash escapes in the walker, and add a regression test for an escaped quote followed by a pipe.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:25:47Z",
+      "title": "P1 regression: split_all_segments ignores backslash-escaped quotes"
+    },
+    {
+      "id": "3afd18d1-1b7e-4c4d-9ab7-5c711ce52f54",
+      "phase": "next",
+      "reason": "Observed 2026-08-01 while trying to prove authorization compliance from the machine record. BrokerDecision carries turn_grant_id and the broker sets it, but the persisted audit record in .ai/execution_audit.jsonl has no such field: its keys are agent, classification, decision, execution_outcome, exit_code, files_affected, normalized_command, original_command, policy_rule, project_id, reasons, record_id, rejection_reason, rollback_info, task_id, timestamp, user_approved. So the audit shows that an action was allowed and how it was classified, but not which authorization permitted it. Compliance can only be inferred indirectly - here, an allow of tests_and_builds with no policy ever active implies a turn grant, because the no-policy path denies that class. For an evidence system whose purpose is proving what was authorized, the grant id belongs in the record.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:38:07Z",
+      "title": "Audit does not record which turn grant authorized an action"
+    },
+    {
+      "id": "0f646938-207c-4a02-90c4-c5ebb9f5ea18",
+      "phase": "next",
+      "reason": "Supersedes the earlier parked entry claiming the audit does not record which turn grant authorized an action. That entry was wrong: it was based on inspecting only the top-level JSON keys of an audit record. The provenance is carried inside the reasons list, which holds the granting rule ('turn-scoped owner grant: tests_and_builds'), a human-readable description ('turn grant 63245df4 (read + existing tests, one turn, head 8575e3376bf9, epoch 1)') and an explicit 'turn_grant_id=<uuid>' entry. Measured 2026-08-01: 50 records in .ai/execution_audit.jsonl carry turn_grant_id=, of which 11 are tests_and_builds decisions. The only real observation left is cosmetic - provenance lives in a free-text list rather than a dedicated field, so it is queryable by substring rather than by key. Treat the earlier entry as retracted.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:40:17Z",
+      "title": "CORRECTION: the audit does record turn-grant provenance"
+    },
+    {
+      "id": "fce5bca7-d73d-4ccc-814c-c0f2e498a276",
+      "phase": "now",
+      "reason": "Found 2026-08-01 when the owner approved committing only the four P0 implementation files while eight tracked files were modified. turngrant._commit_snapshot runs 'git status --porcelain=v1 --untracked-files=no' and puts EVERY modified tracked path into allowed_commit_paths; validate_commit_command then requires the commit command's paths to equal that list exactly. So the exact-commit grant is all-or-nothing: it can authorize committing the entire dirty tracked tree or nothing. Here that means a security fix cannot be committed without also committing four .ai/ state files that DogBuild itself wrote during the session. Fix: let an exact-commit grant carry an owner-approved subset of the snapshot, validating the diff of just those paths, so state churn and code changes can be committed separately.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:49:21Z",
+      "title": "No way to approve a commit of a subset of the working tree"
+    },
+    {
+      "id": "3c2bb62e-862f-4304-948a-f3705ef054ee",
+      "phase": "now",
+      "reason": "Found 2026-08-01 by attempting the owner-approved commit. _action_class_for_tier1 at psk/governor/classifier.py:469 tests naive substrings against the WHOLE command and orders them badly: 'test' and 'build' are checked before 'git commit'. So 'git commit ... tests/test_execution_governor.py -m ...' returns action_class tests_and_builds instead of git_commit. Observed live: the broker denied it with 'no active policy; conservative denial for tests_and_builds' - a git commit reported as a test run. Escalation: with NO policy this fails safe, but under a read_and_verify turn grant, _grant_decision_for_bash sees action_class tests_and_builds, so cls.action_class != COMMIT_ACTION_CLASS and the exact-commit validation is skipped entirely, then turngrant.permits() returns True because tests_and_builds is in ALLOWED_ACTION_CLASSES at tier 1. A commit whose command text contains 'test' would therefore be ALLOWED by a read-and-verify grant, with no diff snapshot, no message check and no path check. Under a policy granting tests_and_builds auto and git_commit approval, the same commit auto-executes. Worse in this repository specifically: the checkout path contains 'dogbuild', so any tier 1 command written with an absolute path contains 'build' and lands in tests_and_builds. Same defect family as the original P0 - unanchored matching against the whole string - but on the action-class axis rather than the tier axis. NOT EXPLOITED: the owner-approved commit was left unmade. Fix: derive the action class from the command verb of the classified segment, not from substrings of the whole line, and order git_commit and git_add before the test and build heuristics.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T21:53:16Z",
+      "title": "P0: git commit misclassified as tests_and_builds, bypassing commit approval"
+    },
+    {
+      "id": "c9a84963-8f0f-44e5-b2a8-d718285743a4",
+      "phase": "now",
+      "reason": "Observed 2026-08-01. The owner wrote 'Run the focused governor tests and the complete stdlib unit-test suite against the current committed HEAD. Make no source changes.' No turn grant was created and the test run was denied. Cause: turngrant._MUTATION_INTENT lists 'make' as a mutation verb, and _NO_CHANGE_ASSURANCE is meant to strip assurances first, but its alternatives are literal - 'make no changes?' and 'no changes?' require the words to be contiguous. Inserting one word, as in 'make no SOURCE changes', defeats both, so the assurance survives the strip and its own leading 'make' is then read as a request to change something. The eligibility reason becomes \"instruction also requests a change: 'make'\". A stronger promise not to modify anything is thus more likely to be rejected than a vaguer one. This is the third phrasing-dependent authorization failure recorded this session, after explicit authorization language being unrecognized and a bare command line granting nothing. Fix: allow optional words inside the assurance alternatives, for example make\\s+no\\s+\\w*\\s*changes?, and scan for mutation intent only outside matched assurances.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-01T22:11:50Z",
+      "title": "The no-change assurance is too literal, so 'make no source changes' voids the grant"
+    },
+    {
+      "id": "b7920dff-f125-4049-bd48-1c83bb386f73",
+      "phase": "now",
+      "reason": "Observed 2026-08-01 immediately after the P0 fix was committed. 'gh issue view 9 2>&1 | head -60' was denied as repository_write / tier_2_material, so a GitHub issue cannot be read. The classifier has no knowledge of the gh CLI, so any gh command falls to the conservative unknown-command default. Note the history: the identical command shape for issue #2 SUCCEEDED earlier in this same session, but only because the unanchored Tier 0 word list matched the trailing '| head -60' and downgraded the whole command to read-only. That was the bypass. Fixing it correctly removed an accidental permission that real work depended on. This is not a safety regression - denying an unknown command is right - but it blocks legitimate read-only work with no supported alternative, because there is also no way to create an execution policy that would permit it. Fix: teach the classifier the read-only gh subcommands (issue view/list, pr view/list/diff, repo view, api GET) as tier 0, and keep gh issue create/close, pr merge and similar at higher tiers.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-02T00:48:44Z",
+      "title": "Read-only gh commands are denied; the P0 fix removed an accidental allowance"
+    },
+    {
+      "id": "3b6cf55b-6875-403f-a2a1-e3025fdbb267",
+      "phase": "next",
+      "reason": "Observed 2026-08-01 while working issue #9. broker._is_known_safe_bash calls _is_dogbuild_command on the WHOLE command string, so a dogbuild command is only recognized when it is the entire line. Since classification now splits compound commands per stage, a line such as 'grep -c pattern file; dogbuild governor test; git diff --check' has its dogbuild stage classified as an unknown command at tier_2_material, and the whole line is denied with no active policy. Every stage there is read-only. Reproduced live this turn. Direction is conservative so it is over-blocking, not a bypass, but it makes DogBuild's own commands second-class inside the compounds an agent naturally writes. Fix: apply the dogbuild-internal check per segment in the same place the per-segment classification happens, so an all-safe compound containing dogbuild commands stays allowed. Related to the parked entry about read-only gh commands: both are cases where a genuinely read-only command has no way to be recognized.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-02T01:00:46Z",
+      "title": "DogBuild's own commands are unrecognized inside compound commands"
+    },
+    {
+      "id": "10bdf84b-ba99-47fe-92f4-3ef00058f9af",
+      "phase": "next",
+      "reason": "Identified 2026-08-01 while reporting issue #9 risk, and demonstrated unintentionally in this very session. The closing boundary is the fixed string '── end of dogBuild response ' padded to 60 characters. A delegated response that quotes that string - which happens whenever the assistant explains or documents the terminal format, as it did when showing before-and-after examples - produces a line indistinguishable from the real closing rule. A reader or a grep over scrollback then sees the response ending early. The existing test covers a response containing a generic 60-dash rule, not one containing the exact boundary text, so this is untested as well as unhandled. Options: emit a short per-turn nonce in both rules so they cannot be predicted or quoted; or indent every response line by a fixed prefix so the rules are structurally distinguishable; or escape any line in the response that matches a boundary. The nonce is cheapest and keeps the labels readable. Not fixed here: it is a design change to a shipped-but-uncommitted MVP and the owner asked for a focused fix.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-02T01:04:27Z",
+      "title": "A delegated response quoting the boundary text defeats the boundary"
+    },
+    {
+      "id": "dcfb9780-db30-48cc-97cf-6826517779c6",
+      "phase": "now",
+      "reason": "Found 2026-08-02 by review of the working tree during issue #8. broker._is_dogbuild_command does stripped.startswith(prefix) against the WHOLE command, and _is_known_safe_bash turns a true result into an unconditional allow ahead of the policy engine and any tier check. So 'dogbuild status && rm -rf /', 'dogbuild status; git push origin main' and 'dogbuild status && git commit -m x' are all allowed outright, whatever the policy or grant says. Second flaw in the same function: the prefixes have no token boundary, so 'dogbuildevil --x' also matches. Same defect family as the issue #8 subject - whole-string matching where per-stage matching is required - and it defeats the per-stage grant checking added in this change set, because the dogbuild fast path runs first. Fix, written but not applied because the turn grant denied the edit: add _is_dogbuild_stage requiring the safe word to be the stage's whole first token, and make _is_dogbuild_command require EVERY stage to satisfy it, so a mixed compound falls through to ordinary classification. NOT EXPLOITED.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-02T03:49:25Z",
+      "title": "P0: a dogbuild-prefixed compound is an unconditional allow"
+    },
+    {
+      "id": "d9b9b923-8fc6-46cb-92ad-f6d840cff664",
+      "phase": "now",
+      "reason": "Found 2026-08-02 by running the arbitrary-script regression the owner requested. The allowlist pattern is npm\\s+run\\s+(?:test|build)\\b. A word boundary sits between 'build' and ':', so 'npm run build:prod' matches, classifies as tests_and_builds, and IS ALLOWED by a read-and-verify grant. Test evidence: test_a_grant_denies_arbitrary_npm_scripts fails with 'True is not false : build:prod'. The same defect admits build-and-deploy, test-and-publish, build.release and any other name whose approved prefix is followed by a non-word character. This is the same widening the owner rejected, in a narrower form: package.json binds build:prod to whatever it likes. Fix: require the script name to end at whitespace or end of string rather than at a word boundary - npm\\s+run\\s+(?:test|build)(?:\\s|$). Not applied: the turn grant denied the edit. SECOND, non-security finding in the same run: test_npm_run_arbitrary_script_is_not_a_test_run asserts repository_write for 'test-and-deploy', but that command matches the tier 4 deploy pattern and correctly classifies as deploy. That expectation is wrong and should assert not-tests_and_builds rather than an exact class.",
+      "source_agent": "claude",
+      "status": "parked",
+      "timestamp": "2026-08-02T03:57:28Z",
+      "title": "P0 in the working tree: npm run build:prod is permitted by a read-and-verify grant"
     }
   ],
   "reserved_approvals": [
@@ -1156,5 +1363,5 @@
     "set_at": "2026-07-28T05:38:46Z",
     "version": 9
   },
-  "updated_at": "2026-07-28T05:44:07Z"
+  "updated_at": "2026-08-02T03:57:28Z"
 }

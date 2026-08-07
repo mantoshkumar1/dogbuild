@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional
 
 from . import turngrant as turngrant_mod
 from .classifier import RiskTier, classify_command
+from .parser import split_all_segments
 from .decision import decide
 from .policy import ActionLevel, ExecutionPolicy, load_policy
 
@@ -276,11 +277,19 @@ def _grant_decision_for_bash(
     message. Anything else is denied here rather than falling through, so a
     grant can never be the reason a wider action slipped past.
     """
-    cls = classify_command(command.strip(), policy)
-    tier = _tier_index(cls.tier)
+    stripped = command.strip()
+    cls = classify_command(stripped, policy)
     grant_id = str(grant.get("turn_id", ""))
 
-    if cls.action_class == turngrant_mod.COMMIT_ACTION_CLASS:
+    # Every stage is classified, not only the command as a whole. Compound
+    # classification escalates only on a strictly *higher* tier, so a commit
+    # sharing tier 1 with a permitted stage — `python -m pytest && git commit`
+    # — would never be examined here and the grant would allow the commit.
+    segments = split_all_segments(stripped) or [stripped]
+    stage_classes = [classify_command(segment, policy) for segment in segments]
+
+    if any(c.action_class == turngrant_mod.COMMIT_ACTION_CLASS
+           for c in stage_classes):
         valid, validation_reasons = turngrant_mod.validate_commit_command(
             repo_root, grant, command,
         )
@@ -302,7 +311,14 @@ def _grant_decision_for_bash(
             turn_grant_id=grant_id,
         )
 
-    if turngrant_mod.permits(grant, cls.action_class, tier):
+    # One stage outside the grant denies the whole command.
+    blocked = next(
+        (c for c in stage_classes
+         if not turngrant_mod.permits(grant, c.action_class,
+                                      _tier_index(c.tier))),
+        None,
+    )
+    if blocked is None:
         return BrokerDecision(
             allowed=True,
             reason=f"turn-scoped owner grant: {cls.action_class}",
@@ -316,15 +332,17 @@ def _grant_decision_for_bash(
     if _is_dogbuild_command(command):
         return None
 
+    # Report the stage that actually blocked, which in a compound is often not
+    # the classification of the command as a whole.
     return BrokerDecision(
         allowed=False,
         reason=(
-            f"outside the turn-scoped owner grant: {cls.action_class} is not "
+            f"outside the turn-scoped owner grant: {blocked.action_class} is not "
             f"read-only or an existing local test"
         ),
-        classification=cls.action_class,
-        confidence=cls.confidence,
-        details=[turngrant_mod.describe(grant), *cls.reasons],
+        classification=blocked.action_class,
+        confidence=blocked.confidence,
+        details=[turngrant_mod.describe(grant), *blocked.reasons],
         turn_grant_id=grant_id,
     )
 

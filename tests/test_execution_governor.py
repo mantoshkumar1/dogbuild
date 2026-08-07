@@ -408,6 +408,313 @@ class TestReadOnlyStageBypass(unittest.TestCase):
 
 
 # ======================================================================
+# TIER 1 ACTION CLASS (P0 regression)
+# ======================================================================
+class TestTier1ActionClass(unittest.TestCase):
+    """The action class comes from the verb, never from the arguments.
+
+    Observed 2026-08-01: `git commit … tests/test_execution_governor.py -m …`
+    was classified tests_and_builds, because "test" was matched anywhere in the
+    line before "git commit" was considered. A turn grant permits
+    tests_and_builds, and any class other than git_commit bypasses exact-commit
+    validation, so such a commit would run with no diff, message or path check.
+    """
+
+    def test_git_commit_touching_test_paths_is_still_a_commit(self):
+        for cmd in ["git commit tests/test_shell.py -m 'msg'",
+                    "git commit -m 'add tests for the parser'",
+                    "git commit psk/governor/classifier.py -m 'fix build'",
+                    "git commit /Users/x/dogbuild/psk/shell.py -m 'msg'"]:
+            c = classify_command(cmd)
+            self.assertEqual(c.action_class, "git_commit", cmd)
+            self.assertEqual(c.tier, RiskTier.TIER_1_REVERSIBLE, cmd)
+
+    def test_git_add_touching_test_paths_is_still_a_write(self):
+        c = classify_command("git add tests/test_shell.py")
+        self.assertEqual(c.action_class, "repository_write")
+
+    def test_genuine_test_and_build_commands_are_unaffected(self):
+        for cmd, expected in [
+            ("python -m unittest discover", "tests_and_builds"),
+            ("python3 -m pytest tests/ -q", "tests_and_builds"),
+            ("py -m unittest", "tests_and_builds"),
+            ("npm test", "tests_and_builds"),
+            ("npm run build", "tests_and_builds"),
+            ("jest --watch", "tests_and_builds"),
+            ("mocha spec/", "tests_and_builds"),
+            ("make -j4", "tests_and_builds"),
+            # Genuine invocations that reach Tier 1 through the unanchored
+            # tier patterns and must not fall back to repository_write.
+            ("npx jest", "tests_and_builds"),
+            ("npx mocha spec/", "tests_and_builds"),
+            ("./node_modules/.bin/jest --ci", "tests_and_builds"),
+            ("/usr/bin/make all", "tests_and_builds"),
+            ("make build", "tests_and_builds"),
+            ("npm run build", "tests_and_builds"),
+        ]:
+            c = classify_command(cmd)
+            self.assertEqual(c.action_class, expected, cmd)
+            self.assertEqual(c.tier, RiskTier.TIER_1_REVERSIBLE, cmd)
+
+    def test_npm_run_is_not_a_blanket_test_run(self):
+        """`npm run <script>` is arbitrary script execution.
+
+        Treating every script as tests_and_builds would let a read-and-verify
+        grant run `npm run publish` or `npm run migrate`.
+        """
+        for script in ("publish", "release", "migrate", "start", "serve",
+                       "postinstall", "anything-at-all",
+                       # Plausible-sounding names are still arbitrary scripts:
+                       # package.json decides what they run.
+                       "tests", "lint", "typecheck", "check", "coverage"):
+            c = classify_command(f"npm run {script}")
+            self.assertNotEqual(c.action_class, "tests_and_builds", script)
+
+    def test_npm_run_deploy_is_external_not_a_test_run(self):
+        """Pinned separately because it is safe for a different reason.
+
+        `npm run deploy` never reaches the Tier 1 verb table at all: the
+        tier 4 `deploy` pattern matches first. That means the npm allowlist is
+        not what protects it, so a change to either mechanism alone could stop
+        covering it.
+        """
+        c = classify_command("npm run deploy")
+        self.assertEqual(c.tier, RiskTier.TIER_4_EXTERNAL)
+        self.assertEqual(c.action_class, "deploy")
+        self.assertNotEqual(c.action_class, "tests_and_builds")
+
+    def test_a_grant_denies_npm_run_deploy(self):
+        self.assertFalse(self._decide("npm run deploy").allowed)
+        # Also when hidden behind a permitted stage.
+        self.assertFalse(self._decide("npm test && npm run deploy").allowed)
+
+    def test_npm_run_publish_is_caught_only_by_the_allowlist(self):
+        """The case with no second line of defence.
+
+        `npm publish` is tier 4, but the tier 4 pattern requires the two words
+        adjacent, so `npm run publish` slips past it and reaches Tier 1. Only
+        the allowlist keeps it out of tests_and_builds — which is why the
+        blanket `npm\\s+(?:test|run)` form was a real widening rather than a
+        cosmetic one.
+        """
+        adjacent = classify_command("npm publish")
+        self.assertEqual(adjacent.tier, RiskTier.TIER_4_EXTERNAL)
+
+        viarun = classify_command("npm run publish")
+        self.assertEqual(viarun.tier, RiskTier.TIER_1_REVERSIBLE)
+        self.assertEqual(viarun.action_class, "repository_write")
+        self.assertNotEqual(viarun.action_class, "tests_and_builds")
+
+    def test_a_grant_denies_npm_run_publish(self):
+        self.assertFalse(self._decide("npm run publish").allowed)
+        self.assertFalse(self._decide("npm test && npm run publish").allowed)
+        self.assertFalse(self._decide("npm run test\nnpm run publish").allowed)
+
+    def test_npm_run_postinstall_is_not_a_test_run(self):
+        """A lifecycle hook, and the least test-like script of all.
+
+        `postinstall` is the classic supply-chain execution point: whatever
+        package.json binds it to runs, and nothing in the name suggests a
+        build. No tier 4 pattern covers it, so like `npm run publish` the
+        allowlist is the only thing keeping it out of tests_and_builds.
+        """
+        c = classify_command("npm run postinstall")
+        self.assertEqual(c.tier, RiskTier.TIER_1_REVERSIBLE)
+        self.assertEqual(c.action_class, "repository_write")
+        self.assertNotEqual(c.action_class, "tests_and_builds")
+
+    def test_a_grant_denies_npm_run_postinstall(self):
+        self.assertFalse(self._decide("npm run postinstall").allowed)
+        self.assertFalse(
+            self._decide("npm test && npm run postinstall").allowed)
+
+    def test_npm_run_arbitrary_script_is_not_a_test_run(self):
+        """The general case: the script name carries no authority at all.
+
+        Names with hyphens, digits, scopes or path-like segments must land in
+        the same place as any other unapproved script — an allowlist that only
+        rejects names someone thought to enumerate is not an allowlist.
+        """
+        for script in ("arbitrary-script", "arbitrary_script", "x",
+                       "test-and-deploy", "build:prod", "ci/publish",
+                       "TEST", "Build", "test2", "prebuild"):
+            c = classify_command(f"npm run {script}")
+            # The security property, which holds for every name.
+            self.assertNotEqual(c.action_class, "tests_and_builds", script)
+            # Where nothing higher-risk matched, the conservative default.
+            # `test-and-deploy` is the exception: it matches the tier 4 deploy
+            # pattern, which is a stricter outcome, not a weaker one.
+            if c.tier is RiskTier.TIER_1_REVERSIBLE:
+                self.assertEqual(c.action_class, "repository_write", script)
+
+    def test_a_name_ending_at_a_word_boundary_is_not_an_approved_script(self):
+        """`build:prod` matched `build\\b` and a grant permitted it.
+
+        The approved name has to end at whitespace or end of string, or — for
+        `test` only — a colon-namespaced suffix (see
+        test_namespaced_test_scripts_are_trusted_but_build_scripts_are_not). A
+        bare word boundary is not enough, because `-`, `:` and `.` are all
+        boundaries. `build` gets no colon exception: `build:prod` is the
+        documented case that motivated this rule.
+        """
+        for script in ("build:prod", "build-and-deploy", "test-and-publish",
+                       "build.release"):
+            c = classify_command(f"npm run {script}")
+            self.assertNotEqual(c.action_class, "tests_and_builds", script)
+            self.assertFalse(self._decide(f"npm run {script}").allowed, script)
+
+    def test_namespaced_test_scripts_are_trusted_but_build_scripts_are_not(self):
+        """`test:<name>` is a trusted, owner-approved npm convention.
+
+        `test:unit`, `test:e2e`, and similar are ubiquitous ways real projects
+        organize test scripts, so they are recognized the same as bare `test`.
+        `build:<name>` is deliberately NOT given the same exception: a
+        namespaced build script is more likely to reach a deploy-shaped step,
+        and `build:prod` is the exact case that originally slipped past a
+        looser word-boundary check.
+        """
+        for script in ("test:unit", "test:e2e", "test:watch", "test:ci"):
+            c = classify_command(f"npm run {script}")
+            self.assertEqual(c.action_class, "tests_and_builds", script)
+            self.assertTrue(self._decide(f"npm run {script}").allowed, script)
+
+        for script in ("build:prod", "build:dev", "build:staging"):
+            c = classify_command(f"npm run {script}")
+            self.assertNotEqual(c.action_class, "tests_and_builds", script)
+            self.assertFalse(self._decide(f"npm run {script}").allowed, script)
+
+    def test_a_grant_denies_arbitrary_npm_scripts(self):
+        for script in ("arbitrary-script", "build:prod", "test-and-deploy",
+                       "prebuild", "TEST"):
+            self.assertFalse(self._decide(f"npm run {script}").allowed, script)
+
+    def test_only_the_approved_npm_forms_qualify(self):
+        """The owner-approved list: bare test/build, plus test:<name>."""
+        for cmd in ("npm test", "npm run test", "npm run build",
+                    "npm run test:unit"):
+            self.assertEqual(classify_command(cmd).action_class,
+                             "tests_and_builds", cmd)
+
+    def test_a_grant_does_not_permit_arbitrary_npm_scripts(self):
+        for script in ("publish", "release", "migrate", "deploy"):
+            self.assertFalse(self._decide(f"npm run {script}").allowed, script)
+
+    def test_path_prefixed_git_verbs_are_still_git_verbs(self):
+        self.assertEqual(
+            classify_command("/usr/bin/git commit tests/t.py -m 'm'").action_class,
+            "git_commit",
+        )
+        self.assertEqual(
+            classify_command("/usr/bin/git add tests/t.py").action_class,
+            "repository_write",
+        )
+
+    def test_test_and_build_substrings_in_paths_and_messages(self):
+        """Focused coverage for the exact substrings that caused the defect.
+
+        Includes this repository's own checkout path: the directory is named
+        `dogbuild`, so every absolute path inside it contains "build" and the
+        old heuristic matched on all of them.
+        """
+        checkout = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        commits = [
+            # This checkout's real path, in both a source and a test file.
+            f"git commit {checkout}/psk/governor/classifier.py -m 'msg'",
+            f"git commit {checkout}/tests/test_execution_governor.py -m 'msg'",
+            # Paths chosen so the substrings are present regardless of where
+            # the repository happens to be checked out.
+            "git commit build/artifact.js -m 'msg'",
+            "git commit tests/test_x.py build/out.js -m 'msg'",
+            # Messages, which the old code also scanned.
+            "git commit -m 'build the test harness'",
+            "git commit -m 'testbuild'",
+            "git commit --message='fix build tests'",
+        ]
+        for cmd in commits:
+            self.assertEqual(classify_command(cmd).action_class,
+                             "git_commit", cmd)
+
+        stages = [
+            f"git add {checkout}/tests/test_execution_governor.py",
+            "git add build/",
+            "git add -A tests build",
+        ]
+        for cmd in stages:
+            self.assertEqual(classify_command(cmd).action_class,
+                             "repository_write", cmd)
+
+    def test_a_grant_denies_commits_using_this_checkout_path(self):
+        """The escalation, exercised against the real repository path."""
+        checkout = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for cmd in [f"git commit {checkout}/psk/shell.py -m 'msg'",
+                    f"git commit {checkout}/tests/test_shell.py -m 'msg'"]:
+            self.assertFalse(self._decide(cmd).allowed, cmd)
+
+    def test_an_env_prefix_does_not_hide_the_verb(self):
+        """`VAR=value` precedes the verb rather than being one."""
+        self.assertEqual(classify_command("FOO=bar npm test").action_class,
+                         "tests_and_builds")
+        self.assertEqual(classify_command("CI=1 make").action_class,
+                         "tests_and_builds")
+        self.assertEqual(
+            classify_command("GIT_AUTHOR_NAME=x git commit tests/t.py -m 'm'")
+            .action_class,
+            "git_commit",
+        )
+
+    def test_an_argument_cannot_make_a_command_a_test_run(self):
+        """The escalation direction that mattered: never claim to be a test."""
+        for cmd in ["git commit -m 'test'",
+                    "git add build/output.js",
+                    "git branch make-it-work"]:
+            self.assertNotEqual(classify_command(cmd).action_class,
+                                "tests_and_builds", cmd)
+
+    READ_AND_VERIFY_GRANT = {
+        "kind": "turn_scoped_owner_grant",
+        "turn_id": "regression-grant",
+        "allowed_action_classes": ["repository_read", "tests_and_builds"],
+        "commit_allowed": False,
+        "write_allowed": False,
+    }
+
+    def _decide(self, command):
+        from psk.governor.broker import classify_tool_call
+        return classify_tool_call(
+            "Bash", {"command": command}, "/repo", "/repo",
+            policy=None, turn_grant=self.READ_AND_VERIFY_GRANT,
+        )
+
+    def test_a_turn_grant_does_not_permit_a_commit_touching_test_paths(self):
+        """The P0 escalation, asserted end to end at the broker."""
+        for cmd in ["git commit tests/test_shell.py -m 'msg'",
+                    "git commit /Users/x/dogbuild/psk/shell.py -m 'msg'"]:
+            self.assertFalse(self._decide(cmd).allowed, cmd)
+
+    def test_a_grant_never_permits_a_commit_hidden_in_a_compound(self):
+        """A commit sharing a tier with a permitted stage must still deny.
+
+        Compound classification escalates only on a strictly higher tier, so
+        `python -m pytest && git commit` reports tests_and_builds for the line
+        as a whole. The grant path therefore has to look at every stage, not
+        just the command's overall classification.
+        """
+        for cmd in ["python -m pytest && git commit -m 'x'",
+                    "python3 -m pytest tests/ ; git commit tests/t.py -m 'x'",
+                    "npm test && git commit -m 'x'",
+                    "git status && git commit -m 'x'",
+                    "python -m unittest\ngit commit -m 'x'"]:
+            self.assertFalse(self._decide(cmd).allowed, cmd)
+
+    def test_a_grant_still_permits_an_all_read_and_test_compound(self):
+        """The fix must not over-block genuinely permitted compounds."""
+        for cmd in ["git status && python -m pytest tests/",
+                    "git diff | cat",
+                    "python -m unittest discover 2>&1 | tail -5"]:
+            self.assertTrue(self._decide(cmd).allowed, cmd)
+
+
+# ======================================================================
 # INTERPRETER NORMALIZATION
 # ======================================================================
 class TestInterpreterNormalization(unittest.TestCase):

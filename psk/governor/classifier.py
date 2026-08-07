@@ -466,15 +466,64 @@ def _action_class_for_tier2(cmd: str) -> str:
     return "repository_write"
 
 
+# Tier 1 actions, recognized by the verb that starts the segment. The segment
+# has already been normalized, so every Python interpreter spelling arrives as
+# a leading `python`.
+_TIER1_ACTION_VERBS = (
+    (re.compile(rf"^{_PATH_PREFIX}git\s+commit\b"), "git_commit"),
+    (re.compile(rf"^{_PATH_PREFIX}git\s+add\b"), "repository_write"),
+    (re.compile(rf"^{_PATH_PREFIX}git\s+branch\b"), "branch_create"),
+    (re.compile(r"^(?:python[0-9.]*|py)\s+-m\s+(?:unittest|pytest)\b"),
+     "tests_and_builds"),
+    # `npm test` is the test script by definition. `npm run <script>` is
+    # arbitrary script execution, so only recognized test and build scripts
+    # count: otherwise `npm run publish` or `npm run migrate` would be a test
+    # run, and a read-and-verify grant would permit it. Anything else falls
+    # through to the repository_write default, which no grant permits.
+    (re.compile(rf"^{_PATH_PREFIX}npm\s+test\b"), "tests_and_builds"),
+    # Exactly the owner-approved scripts. Names like `check` or `coverage` are
+    # bound to whatever package.json says, so recognizing them by category
+    # would reopen the same widening in a narrower form.
+    # The script name must END here, not merely hit a word boundary: `\b` sits
+    # between `build` and `:`, so `npm run build:prod` matched and a
+    # read-and-verify grant permitted it. Same for build-and-deploy,
+    # test-and-publish, build.release. `build` gets no exception below:
+    # `build:prod` is the documented case that motivated this whole rule, and
+    # a namespaced build script is more likely to reach a deploy-shaped step
+    # than a namespaced test script is.
+    (re.compile(rf"^{_PATH_PREFIX}npm\s+run\s+build(?:\s|$)"),
+     "tests_and_builds"),
+    # `test:<name>` is a ubiquitous npm convention for organizing test scripts
+    # (test:unit, test:e2e, test:watch, ...) and, owner-approved, is trusted
+    # the same as bare `test`. Only a colon-namespaced suffix qualifies —
+    # `test-and-deploy` and `test.something` still fall through below.
+    (re.compile(rf"^{_PATH_PREFIX}npm\s+run\s+test(?::[\w-]+)?(?:\s|$)"),
+     "tests_and_builds"),
+    # `npx jest` and `./node_modules/.bin/jest` are genuine invocations and
+    # already reach Tier 1 through the unanchored tier patterns, so the verb
+    # table has to recognize them too or they fall back to repository_write.
+    (re.compile(rf"^(?:npx\s+)?{_PATH_PREFIX}(?:jest|mocha|make)\b"),
+     "tests_and_builds"),
+)
+
+
 def _action_class_for_tier1(cmd: str) -> str:
-    if any(x in cmd for x in ("test", "jest", "mocha", "unittest", "pytest")):
-        return "tests_and_builds"
-    if "build" in cmd or "make" in cmd:
-        return "tests_and_builds"
-    if "git commit" in cmd:
-        return "git_commit"
-    if "git add" in cmd:
-        return "repository_write"
-    if "git branch" in cmd:
-        return "branch_create"
+    """Derive the action class from the segment's own verb.
+
+    Substring matching over the whole line put `git commit tests/test_x.py`
+    into tests_and_builds, because "test" appeared in a path and was checked
+    before "git commit". That is not cosmetic: a turn grant permits
+    tests_and_builds, and an action class other than git_commit skips the
+    exact-commit validation entirely, so the commit ran with no diff, message,
+    or path check. A repository whose own checkout path contains "build" made
+    it worse, matching the build heuristic on any absolute path.
+
+    Arguments never decide the action class now — only the verb does. Leading
+    `VAR=value` assignments are stripped first, since they precede the verb
+    rather than being one: `FOO=bar npm test` is still a test run.
+    """
+    stripped = _strip_env_assignments(cmd.strip())
+    for pattern, action_class in _TIER1_ACTION_VERBS:
+        if pattern.match(stripped):
+            return action_class
     return "repository_write"

@@ -1,18 +1,18 @@
 {
-  "actor_name": "codex",
+  "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "Rename the repository and distribution to DogBuild",
-  "changed": "Local repository is now /Users/mantoshkumar/Desktop/project/dogbuild; package and user-facing branding are DogBuild; internal psk and compatibility commands remain; sibling repositories were not modified",
-  "claimed_head": "785643f85b8573b3b5dc98ee4407b44c94646e3d",
-  "created_at": "2026-07-28T05:44:14Z",
-  "failed": "Initial no-build-isolation install and one wrapping-sensitive test assertion were corrected",
+  "building": "GitHub issue #8: P0 command-classification correction in _action_class_for_tier1",
+  "changed": "psk/governor/classifier.py: replaced the whole-line substring checks with _TIER1_ACTION_VERBS, an ordered table of anchored patterns matched against the start of the already-normalized segment. git commit, git add and git branch are recognized before any test or build heuristic, and the runners are matched by their own invocation - python -m unittest/pytest, npm test/run, jest, mocha, make - rather than by a word appearing anywhere in the line. Unrecognized tier 1 commands fall back to repository_write, which is more conservative than before. tests/test_execution_governor.py: added TestTier1ActionClass with five cases.",
+  "claimed_head": "8c2229d0d5bf0f421bf3b8cfc82cdb982654746b",
+  "created_at": "2026-08-02T02:56:43Z",
+  "failed": "None.",
   "goal_alignment": {
     "explanation": "",
-    "goal_contract_revision": 3,
+    "goal_contract_revision": null,
     "status": "IN_SCOPE"
   },
-  "incomplete": "No remote exists, so no hosted repository was renamed or published; sibling cached hook paths were intentionally not migrated",
-  "next_action": "Stop. The owner can test the renamed DogBuild checkout later.",
+  "incomplete": "The five new tests are UNRUN: this instruction contains 'Implement', so no turn grant exists and unittest is denied. The suite was last green at 464 at the previous commit; expect 469 here. Not committed. Only the action-class correction was made: the remaining unanchored Tier 1 patterns, _safe_split escapes, gh classification and dogbuild-in-compound findings are all untouched and still parked.",
+  "next_action": "One read-and-verify turn: Inspect the repository and run the unit tests, summarize the result, and make no changes.",
   "role": "execution_agent",
-  "verified": "390 tests pass; dogbuild command resolves from the renamed editable checkout; context identifies DogBuild/dogbuild; dry-run startup and installed skill are current"
+  "verified": "dogbuild governor test 21/21 after the change, confirming the module imports and the broker path is intact. git diff --check clean, exit 0. Footprint 2 source files, classifier +40 -8 and tests +68. Verified by reading the file that _action_class_for_tier1 has one caller, _classify_segment, which passes the normalized segment."
 }
