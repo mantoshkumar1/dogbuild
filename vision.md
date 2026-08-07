@@ -2,7 +2,82 @@
 
 > **Enable one person to run a large, evolving software project through multiple AI agents without losing project intent, decisions, context, execution state, or authority.**
 
-DogBuild is not just a task manager or shared memory. It is the **coordination and control layer** between the human, the planning AI, execution AIs, and the codebase.
+DogBuild is not just a task manager or shared memory. It is the **coordination and control layer** between the human, the planning/review AI, the execution AIs, GitHub/the codebase, and durable project state.
+
+**The human remains the sole product/project decision authority.** DogBuild coordinates the other roles; it never substitutes for the human's judgment. See [`docs/authority-model.md`](docs/authority-model.md) for the enforced gate hierarchy.
+
+### Roles DogBuild coordinates
+
+- **Strategy / planning / review agent** — architecture, prioritization, and review of implementation against the authoritative task. Today this role is filled by ChatGPT (see `docs/authority-model.md`); the vision does not require it to always be ChatGPT.
+- **Implementation agents** — Claude, Codex, and similar agents that do the actual coding work within an assigned, bounded task.
+- **Repository / GitHub** — durable evidence and project memory: commits, tests, PRs, and issues are the ground truth of what actually happened, not agent narration.
+- **DogBuild itself** — determines project/task state, captures evidence, routes work between the above, and enforces the authority gate. It makes no product or architecture decisions of its own.
+
+### The control loop
+
+```text
+Human authorizes an objective/task
+        v
+DogBuild determines current project/task state
+        v
+Implementation agent works
+        v
+DogBuild captures actual commits/tests/results
+        v
+Review agent inspects the actual implementation against the authoritative task
+        v
+   fixes required? --yes--> DogBuild sends them back to the implementation agent automatically
+        |                    (implementation/review loop continues)
+        no
+        v
+DogBuild advances the state
+        v
+   genuine product/project decision required? --yes--> DogBuild stops and asks the human
+        no
+        v
+DogBuild determines the next authorized action
+```
+
+The human is not the messenger: DogBuild moves work and findings between agents, and the human is not required to copy messages between them by hand.
+
+### What DogBuild must distinguish
+
+At all times, DogBuild must keep these apart rather than blur them into one undifferentiated stream:
+
+- **implementation work** — what an implementation agent actually did;
+- **review findings** — what the review agent actually observed;
+- **factual project state** — what is verifiably true, from repository evidence (commits, tests, CI);
+- **approved decisions** — what the human, or a delegate acting within the human's authority, has accepted;
+- **recommendations** — suggestions from any agent that are not yet decisions;
+- **unresolved questions requiring human authority** — genuine product/project decisions nothing else may make.
+
+### Situations DogBuild must recognize
+
+- implementation complete but CI failed → return to the implementer; do **not** interrupt the human;
+- reviewer finds defects → return findings to the implementer;
+- implementation and review disagree on product behavior → escalate to the human;
+- PR is clean but staging/provider evidence is still required → the task is **not** Done;
+- task completes → update durable project state and determine the next authorized action;
+- routine implementation can run on lower-cost agents; higher-value reasoning/review can run on stronger agents.
+
+### Motivating example: PingStep
+
+Today, on the PingStep project, the human manually copies Claude's implementation result to ChatGPT, then manually copies ChatGPT's review findings back to Claude — repeatedly, for every round of fixes. DogBuild exists to make that loop automatic, without the human losing visibility or authority over it.
+
+### Near-term prototype vs. eventual product
+
+**The first practical DogBuild prototype is deliberately small**, to validate whether the broader vision below is genuinely valuable before the full system is built:
+
+- one repository,
+- one authoritative task/issue,
+- one implementation agent,
+- one review agent,
+- an automatic handoff loop between them,
+- human escalation only for genuine product/project decisions.
+
+Nothing more than this in the first prototype. The milestone roadmap below (Milestones 1–12) is the **eventual, broader product** — evolving objectives, decision memory, contradiction detection, parallel agents, cost-aware orchestration, and so on. It remains the long-run direction, but is **not** the near-term build target; it should only be pursued once the first prototype demonstrates that the loop is genuinely valuable.
+
+> **Open tension, recorded but not resolved here:** [`docs/mvp-scope.md`](docs/mvp-scope.md) currently excludes automated ChatGPT calls and browser automation from the MVP, in favor of manual review-packet exchange. The prototype above calls for an *automatic* handoff loop between the implementation and review agents. Reconciling "manual transport by design" with "automatic loop" is a human product decision, not made by this document.
 
 ---
 

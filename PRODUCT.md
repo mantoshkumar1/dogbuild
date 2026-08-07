@@ -1,5 +1,8 @@
 # PRODUCT
 
+> Full coordination/control-layer vision, roles, the control loop, and the
+> near-term prototype scope vs. the eventual broader product: [`vision.md`](vision.md).
+
 ## Problem
 When Claude, Cursor, Codex, and ChatGPT work on the same project, they don't
 share memory. The human ends up as the manual message bus — copying context,

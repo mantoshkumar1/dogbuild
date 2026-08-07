@@ -117,6 +117,7 @@ implementations).
 
 | Doc | Purpose |
 |---|---|
+| [`vision.md`](vision.md) | Full product vision: coordination/control layer, roles, control loop, first prototype vs. eventual product, milestone roadmap. |
 | [`PRODUCT.md`](PRODUCT.md) | What it is, dogfood→commercial path, Lite vs Pro. |
 | [`docs/authority-model.md`](docs/authority-model.md) | Roles, gate hierarchy (human > ChatGPT > agents > keeper), gate behavior. |
 | [`docs/mvp-scope.md`](docs/mvp-scope.md) | Exactly what's in and out of the two-week MVP. |
