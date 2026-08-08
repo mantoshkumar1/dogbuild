@@ -1,18 +1,18 @@
 {
   "actor_name": "claude",
   "actor_type": "ai_execution_agent",
-  "building": "GitHub issue #8: P0 command-classification correction in _action_class_for_tier1",
-  "changed": "psk/governor/classifier.py: replaced the whole-line substring checks with _TIER1_ACTION_VERBS, an ordered table of anchored patterns matched against the start of the already-normalized segment. git commit, git add and git branch are recognized before any test or build heuristic, and the runners are matched by their own invocation - python -m unittest/pytest, npm test/run, jest, mocha, make - rather than by a word appearing anywhere in the line. Unrecognized tier 1 commands fall back to repository_write, which is more conservative than before. tests/test_execution_governor.py: added TestTier1ActionClass with five cases.",
-  "claimed_head": "8c2229d0d5bf0f421bf3b8cfc82cdb982654746b",
-  "created_at": "2026-08-02T02:56:43Z",
-  "failed": "None.",
+  "building": "Two pieces of pending local work, finished and pushed to origin/main: (1) the clarified DogBuild coordination/control-layer vision consolidated into vision.md (roles, control loop, distinctions, recognizable situations, PingStep example, near-term prototype vs. eventual product), cross-linked from README.md and PRODUCT.md; (2) a P0 fix to the execution governor's tier-1 command classifier.",
+  "changed": "vision.md, README.md, PRODUCT.md (docs, commit 5cb9412); psk/governor/broker.py, psk/governor/classifier.py, tests/test_execution_governor.py, .ai/{AGENT_DECLARATION.json,STATE.md,events.jsonl,state.json} (governor fix, commit d701176)",
+  "claimed_head": "d701176c1fecd193a88e59161f0e14346bab25cb",
+  "created_at": "2026-08-08T20:45:53Z",
+  "failed": "None",
   "goal_alignment": {
-    "explanation": "",
+    "explanation": "Recording a declaration for already-completed, already-pushed work; no new scope introduced.",
     "goal_contract_revision": null,
     "status": "IN_SCOPE"
   },
-  "incomplete": "The five new tests are UNRUN: this instruction contains 'Implement', so no turn grant exists and unittest is denied. The suite was last green at 464 at the previous commit; expect 469 here. Not committed. Only the action-class correction was made: the remaining unanchored Tier 1 patterns, _safe_split escapes, gh classification and dogbuild-in-compound findings are all untouched and still parked.",
-  "next_action": "One read-and-verify turn: Inspect the repository and run the unit tests, summarize the result, and make no changes.",
+  "incomplete": "The Claude->Codex handoff remains generation-tested only, not run end-to-end (Codex unavailable in this environment). The vision's 'first prototype' (automatic implementation<->review handoff loop) is not started: it is blocked on an owner decision, recorded in vision.md as an open tension, about how the review-agent call becomes automatic given the current MVP's manual-transport-by-design constraint (docs/mvp-scope.md).",
+  "next_action": "Owner decides between: (a) continue the current milestone (real use across several sessions, then one outside-user install test), (b) finish the untested Codex handoff slice, or (c) resolve the automatic-transport open tension and start scoping the first prototype. No new feature work until that direction is chosen.",
   "role": "execution_agent",
-  "verified": "dogbuild governor test 21/21 after the change, confirming the module imports and the broker path is intact. git diff --check clean, exit 0. Footprint 2 source files, classifier +40 -8 and tests +68. Verified by reading the file that _action_class_for_tier1 has one caller, _classify_segment, which passes the normalized segment."
+  "verified": "Full suite green locally: 488 tests passed (python -m pytest tests/ -q) after the classifier change, including the new P0 regression tests and the pre-existing test_turn_grant.py suite. Both commits pushed by the owner to origin/main; git log confirms origin/main @ d701176."
 }

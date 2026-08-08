@@ -134,3 +134,4 @@
 {"actor":"claude","event_id":"7026e76b-2c3e-427d-a784-073eed940dd6","payload":{"claimed_head":"8c2229d0d5bf0f421bf3b8cfc82cdb982654746b"},"schema_version":"1.0.0","timestamp":"2026-08-02T02:56:43Z","type":"declaration_recorded"}
 {"actor":"claude","event_id":"d961315b-6abd-4811-bfdf-04e818c7c654","payload":{"title":"P0: a dogbuild-prefixed compound is an unconditional allow"},"schema_version":"1.0.0","timestamp":"2026-08-02T03:49:25Z","type":"idea_parked"}
 {"actor":"claude","event_id":"7d3abad4-fad6-4a19-b3ff-1123b706bb22","payload":{"title":"P0 in the working tree: npm run build:prod is permitted by a read-and-verify grant"},"schema_version":"1.0.0","timestamp":"2026-08-02T03:57:28Z","type":"idea_parked"}
+{"actor":"claude","event_id":"e8b4eec9-b18d-4746-903c-6bf331fc5443","payload":{"claimed_head":"d701176c1fecd193a88e59161f0e14346bab25cb"},"schema_version":"1.0.0","timestamp":"2026-08-08T20:45:53Z","type":"declaration_recorded"}
