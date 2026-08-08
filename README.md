@@ -1,5 +1,7 @@
 # DogBuild
 
+[![CI](https://github.com/mantoshkumar1/dogbuild/actions/workflows/ci.yml/badge.svg)](https://github.com/mantoshkumar1/dogbuild/actions/workflows/ci.yml)
+
 A local, file-based **project interface and authority layer** between coding agents
 (Claude Code, Cursor, Codex) with **ChatGPT** as the delegated reviewer and the
 **human owner** in ultimate authority. It keeps every agent operating from **one
@@ -20,6 +22,11 @@ authority gate, and interrupts the human only on real exceptions.
   truth. See [`docs/governance-boundaries.md`](docs/governance-boundaries.md) and
   the versioned [`docs/product-governance-source.md`](docs/product-governance-source.md)
   snapshot.
+- **Tests run in CI, not just locally.** Every push and pull request against
+  `main` runs the full suite (`python -m unittest discover -s tests`) on Python
+  3.9 and 3.11 — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Merge
+  authority itself is still human-only regardless of CI result; see
+  [`docs/authority-model.md`](docs/authority-model.md).
 
 ## Quickstart
 
