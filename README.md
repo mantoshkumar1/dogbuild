@@ -14,7 +14,7 @@ authority gate, and interrupts the human only on real exceptions.
 ## Motivating workflow
 
 DogBuild grew out of coordination friction the founder hit while building
-PingStep: implementation done by one coding agent, review done separately by
+[PingStep](https://pingstep.dev/): implementation done by one coding agent, review done separately by
 another, with the human manually carrying the implementation result to the
 reviewer and the review findings back — every round of fixes. PingStep is a
 motivating example, not a DogBuild dependency or customer; day-to-day
