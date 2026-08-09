@@ -11,6 +11,18 @@ authority gate, and interrupts the human only on real exceptions.
 > Your coding agents coordinate through a verified state ledger instead of hidden
 > conversations. You step in only when a decision genuinely needs you.
 
+## Motivating workflow
+
+DogBuild grew out of coordination friction the founder hit while building
+PingStep: implementation done by one coding agent, review done separately by
+another, with the human manually carrying the implementation result to the
+reviewer and the review findings back — every round of fixes. PingStep is a
+motivating example, not a DogBuild dependency or customer; day-to-day
+dogfooding currently runs against PhotoSahi and DogBuild itself (see Quickstart
+below). That manual transport is still how the alpha works — DogBuild does not
+yet automate it (see "What is actually running" below). Full account:
+[`vision.md`](vision.md).
+
 ## Status
 
 - **Phase:** two-week MVP (founder tool / dogfood).
