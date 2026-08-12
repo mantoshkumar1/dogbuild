@@ -1,4 +1,11 @@
-# Two-Week MVP Scope
+# Historical Two-Week MVP Scope
+
+> **Historical foundation, superseded as the active product boundary.** This
+> two-week local-only scope was completed as DogBuild's first proof. The current
+> direction is the founder-first remote-control MVP documented in `vision.md`
+> and sequenced in `next-slices.md`. This file remains to preserve the original
+> constraints and prevent retrospective claims that its automation already
+> existed.
 
 ## In scope (Lite)
 A deterministic, local, file-based CLI implementing one canonical protocol:
@@ -21,7 +28,7 @@ A deterministic, local, file-based CLI implementing one canonical protocol:
 10. **Thin Claude / Cursor / Codex adapters** — over the one canonical protocol.
 11. **Dogfooding** — in PhotoSahi and in DogBuild itself.
 
-## Out of scope (hard boundaries — do not add)
+## Out of scope for the historical two-week MVP
 - ❌ OpenAI API / any automated ChatGPT call
 - ❌ browser automation
 - ❌ hosted backend
@@ -31,6 +38,12 @@ A deterministic, local, file-based CLI implementing one canonical protocol:
 - ❌ cloud sync
 - ❌ multi-repo / team / shared state
 - ❌ four separate implementations — **one canonical protocol, thin adapters only**
+
+The current remote-control direction retains the no-hosted-backend, no-dashboard,
+no-payment, no-cloud-sync, and single-protocol constraints. It intentionally
+revisits only the former blanket exclusion of automation: GitHub is the planned
+asynchronous transport between a remote planning surface and a local runtime,
+without exposing the local machine to inbound internet traffic.
 
 ## Principles
 - **Local-only, file-based, deterministic.** The gate's decision must be

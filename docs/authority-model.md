@@ -31,6 +31,14 @@ objections, outcomes; prevents silent overrides; decides whether execution may
 proceed via **deterministic gate rules**. Makes **no** product/architecture
 decisions.
 
+For a proposed new task, the same boundary applies before an issue is created:
+DogBuild must re-derive repository identity, current task/PR state, active
+dependencies, duplicate or superseded owners, and alignment with the approved
+vision and sequence. If an existing owner covers the work, it must link that
+owner rather than create a duplicate. If the proposal changes scope, priority,
+sequencing, acceptance evidence, or authority, DogBuild must stop for the
+appropriate strategy or human decision instead of self-authorizing a ticket.
+
 ### ChatGPT — delegated reviewer
 Returns `APPROVE` · `APPROVE_WITH_CONDITIONS` · `VETO` · `NEEDS_HUMAN`. When a
 valid, current decision exists, execution agents **must respect it** and may not

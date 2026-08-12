@@ -40,6 +40,50 @@ DogBuild determines the next authorized action
 
 The human is not the messenger: DogBuild moves work and findings between agents, and the human is not required to copy messages between them by hand.
 
+### Founder-first remote-control direction
+
+> **“Save time not by doing less but by being more productive.”**
+
+This is a founder note and product motto, not a promise of autonomous product
+decisions. DogBuild should remove routine coordination overhead so the owner can
+spend attention on intent, priorities, and consequential judgment.
+
+The observed bottleneck is human-presence dependency: after an agent completes a
+bounded step, finds evidence, or needs routine review, progress often waits for
+the owner to return to a development machine and relay information between
+tools. The target is a local DogBuild runtime, coordinated through GitHub, that
+lets a planning AI on another device inspect durable evidence, issue a bounded
+authorized command, and receive a concise result. The owner consumes meaningful
+progress, blockers, recommendations, and decisions—not activity logs.
+
+```text
+Human owner
+    ↓
+Planning AI (initially ChatGPT; replaceable)
+    ↓
+GitHub-visible DogBuild state + bounded coordination messages
+    ↓
+Local DogBuild runtime on the execution machine
+    ↓
+Claude / another execution agent
+    ↓
+repository, tests, PRs, and CI
+    ↓
+Evidence-backed state returns to GitHub for the next judgment
+```
+
+Durable project facts belong in repository/GitHub-visible DogBuild state;
+transient process state such as sessions, polling cursors, locks, retries, and
+logs stays local. Losing the execution machine must not lose a fact needed to
+plan or resume work. DogBuild owns execution-state coherence across durable
+state, repository evidence, GitHub issues/PRs, and execution metadata; the
+planning AI and owner retain strategic prioritization.
+
+**Defining product test:** can the owner leave the development computer, later
+use a planning AI from another device to understand what happened, make only the
+decisions requiring judgment, and let already-authorized work continue without
+manual message relay?
+
 ### What DogBuild must distinguish
 
 At all times, DogBuild must keep these apart rather than blur them into one undifferentiated stream:
@@ -77,7 +121,12 @@ Today, on the PingStep project, the human manually copies Claude's implementatio
 
 Nothing more than this in the first prototype. The milestone roadmap below (Milestones 1–12) is the **eventual, broader product** — evolving objectives, decision memory, contradiction detection, parallel agents, cost-aware orchestration, and so on. It remains the long-run direction, but is **not** the near-term build target; it should only be pursued once the first prototype demonstrates that the loop is genuinely valuable.
 
-> **Open tension, recorded but not resolved here:** [`docs/mvp-scope.md`](docs/mvp-scope.md) currently excludes automated ChatGPT calls and browser automation from the MVP, in favor of manual review-packet exchange. The prototype above calls for an *automatic* handoff loop between the implementation and review agents. Reconciling "manual transport by design" with "automatic loop" is a human product decision, not made by this document.
+> **Current boundary:** the historical two-week local-only MVP remains evidence,
+> not the active product boundary. The remote-control MVP uses GitHub as an
+> asynchronous rendezvous surface and a local runtime; it does not require an
+> automated ChatGPT API call, browser automation, hosted backend, or autonomous
+> irreversible action. See [`docs/next-slices.md`](docs/next-slices.md) for the
+> gated single-project sequence.
 
 ---
 

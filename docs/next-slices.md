@@ -1,24 +1,34 @@
-# Next slices (recorded, NOT yet implemented)
+# Next slices
 
-Day 3 shipped the first complete vertical slice: **one repo, one execution agent
-(Claude), one ChatGPT review, one imported `APPROVE`, one gated `PROCEED`, one
-checkpointed result** — manual Markdown transport, protocol kept agent-neutral.
+## Documentation prerequisite — #27
 
-The immediate next two slices, in order:
+The remote-control product direction must be reconciled into durable
+documentation through #27 before the implementation sequence below begins. No
+runtime behavior is introduced by that prerequisite; once it has merged, #19 is
+the next implementation item.
 
-## Slice 1 — remaining decision outcomes
-Add `VETO`, `APPROVE_WITH_CONDITIONS`, and `NEEDS_HUMAN` to the import + gate:
-- `VETO` → gate `STOP`, present the compact conflict report; interrupt the human.
-- `APPROVE_WITH_CONDITIONS` → gate proceeds only after each condition becomes a
-  tracked requirement; stop if a condition can't be met or changes scope.
-- `NEEDS_HUMAN` → gate stops, one focused question with choices + consequences.
-- Plus: stale/superseded refresh and the local-agent-disagreement loop (challenge
-  only with new evidence, re-request, stop until re-decided).
+## Remote-control MVP sequence — not implemented
 
-## Slice 2 — Claude → Codex handoff over the same canonical protocol
-Add a second execution agent (Codex) using the **same** identity-carrying packets
-and gate — no protocol redesign. Proves agent-neutrality end to end.
+1. **#19 — local readiness:** prove DogBuild can reconstruct one authoritative
+   GitHub issue, execute it locally with Claude, preserve evidence, and resume
+   without human context reconstruction.
+2. **#24 — durable remote-readable state:** persist every planning-relevant fact
+   while keeping ephemeral runtime state local.
+3. **#20 — canonical GitHub transport:** define bounded commands and status over
+   the existing packet/lineage protocol; do not create a second protocol.
+4. **#21 — local watcher:** conservatively poll GitHub, validate identity,
+   idempotency, authority, and task ownership before dispatch.
+5. **#22 — outbound status:** publish only evidence-backed, meaningful state
+   transitions for a remote planner.
+6. **#23 — remote-planner proof:** use a planning AI from another device to
+   understand one project and continue only already-authorized work.
 
-Everything else (Cursor support, Claude plugin packaging, browser automation,
-OpenAI API, daemon, hosted backend, dashboard, payments, marketplace) remains out
-of scope until these two slices land and the tool has been dogfooded repeatedly.
+Only after this single-project loop works repeatedly should DogBuild consider
+portfolio orchestration (#25), commercial packaging, or broader integrations.
+
+## Preserved foundation
+
+The historical work on decision outcomes and Claude-to-Codex handoff remains
+valuable, but no longer defines the execution sequence. The canonical protocol,
+authority gate, evidence checks, and agent-neutral adapters remain prerequisites
+for every slice above.

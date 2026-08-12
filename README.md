@@ -25,7 +25,9 @@ yet automate it (see "What is actually running" below). Full account:
 
 ## Status
 
-- **Phase:** two-week MVP (founder tool / dogfood).
+- **Phase:** founder-first remote-control MVP definition. The original two-week,
+  local-only MVP is retained as a completed foundation, not the current product
+  boundary. The remote-control loop is planned; it is not running yet.
 - **Framing:** built because the founder already needs it. Selling it is a
   **hypothesis to test later** — payment, demand, pricing, and distribution are
   **explicitly unvalidated** (see [`docs/commercial-assumptions.md`](docs/commercial-assumptions.md)).
@@ -39,6 +41,21 @@ yet automate it (see "What is actually running" below). Full account:
   3.9 and 3.11 — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Merge
   authority itself is still human-only regardless of CI result; see
   [`docs/authority-model.md`](docs/authority-model.md).
+
+## Target architecture — not implemented yet
+
+DogBuild is moving toward a local runtime that safely coordinates work through
+GitHub: a planning AI can inspect durable, evidence-backed project state from
+another device; the local runtime can receive a bounded authorized command,
+dispatch an execution agent, verify the result, and publish only meaningful
+status transitions. The owner should make consequential decisions, not relay
+routine messages or reconstruct status by hand.
+
+The first implementation sequence is intentionally narrow: local issue
+readiness, durable remote-readable state, canonical GitHub transport, safe local
+polling, outbound status, then one remote-planner proof. See
+[`docs/next-slices.md`](docs/next-slices.md). This does not add a hosted backend,
+dashboard, autonomous merges, or automatic production actions.
 
 ## Quickstart
 
@@ -125,12 +142,14 @@ Plain questions like "What's happening?", "What's next?", "Did the tests pass?"
 are answered the same way. Anything else is a real instruction and goes to
 Claude Code.
 
-## Scope discipline (MVP)
+## Scope discipline
 
-Local-only · file-based · **no** OpenAI API · **no** browser automation · **no**
-hosted backend · **no** accounts · **no** payment · **no** dashboard · **no**
-cloud sync. One canonical protocol; thin per-agent adapters (never four
-implementations).
+The remote-control MVP remains local-runtime-first and GitHub-rendezvous-based:
+no hosted backend, public dashboard, accounts, payment system, cloud sync, or
+autonomous irreversible action. Existing GitHub, local agents, CI, repository
+state, and one canonical protocol take priority over new infrastructure. The
+historical two-week MVP boundary is preserved in
+[`docs/mvp-scope.md`](docs/mvp-scope.md).
 
 ## Docs
 
@@ -139,7 +158,7 @@ implementations).
 | [`vision.md`](vision.md) | Full product vision: coordination/control layer, roles, control loop, first prototype vs. eventual product, milestone roadmap. |
 | [`PRODUCT.md`](PRODUCT.md) | What it is, dogfood→commercial path, Lite vs Pro. |
 | [`docs/authority-model.md`](docs/authority-model.md) | Roles, gate hierarchy (human > ChatGPT > agents > keeper), gate behavior. |
-| [`docs/mvp-scope.md`](docs/mvp-scope.md) | Exactly what's in and out of the two-week MVP. |
+| [`docs/mvp-scope.md`](docs/mvp-scope.md) | Historical two-week MVP scope and its retained constraints. |
 | [`docs/execution-plan.md`](docs/execution-plan.md) | 14-day build plan. |
 | [`docs/success-and-kill-criteria.md`](docs/success-and-kill-criteria.md) | When it worked; when to park it. |
 | [`docs/commercial-assumptions.md`](docs/commercial-assumptions.md) | Unresolved, unvalidated commercial questions. |
