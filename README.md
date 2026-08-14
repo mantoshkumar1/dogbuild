@@ -53,6 +53,23 @@ dogbuild init . --objective "your project objective"
 dogbuild start
 ```
 
+### Share a short status
+
+Write a small report to any folder you choose. This is useful when you keep a
+separate, shared status area for your projects.
+
+```bash
+dogbuild report . --output-dir /path/to/reports/dogbuild \
+  --changed "Added the report command" \
+  --worked "Focused tests pass" \
+  --blocked "Nothing" \
+  --next "Open the pull request"
+```
+
+Each answer must be one short line. DogBuild does not copy project files,
+source code, or command output into the report, and it refuses obvious secret
+values. Pick the output folder yourself; DogBuild never hard-codes one.
+
 You land on the DogBuild prompt:
 
 ```
