@@ -18,7 +18,7 @@ from . import (__version__, agentmode, autonomy as autonomy_mod, brief as brief_
                handoff as handoff_mod, human as human_mod, identity as identity_mod,
                install as install_mod, launcher as launcher_mod, park as park_mod,
                policy as policy_mod,
-               registry, review, store)
+               registry, report as report_mod, review, store)
 from .governor import (
     audit as gov_audit,
     brief as gov_brief,
@@ -87,6 +87,19 @@ def _cmd_show(args) -> int:
 def _cmd_status(args) -> int:
     card = context.context_card(args.path)
     _emit(context.render_card_text(card), card, args.json)
+    return SUCCESS
+
+
+def _cmd_report(args) -> int:
+    result = report_mod.write_status_report(
+        args.path,
+        output_dir=args.output_dir,
+        changed=args.changed,
+        worked=args.worked,
+        blocked=args.blocked,
+        next_action=args.next_action,
+    )
+    _emit(f"Wrote safe status report: {result['report']}", result, args.json)
     return SUCCESS
 
 
@@ -688,6 +701,18 @@ def _build_parser() -> argparse.ArgumentParser:
     pst.add_argument("path", nargs="?", default=".")
     pst.add_argument("--json", action="store_true")
     pst.set_defaults(func=_cmd_status)
+
+    prp = sub.add_parser("report", help="write a short, safe status report")
+    prp.add_argument("path", nargs="?", default=".")
+    prp.add_argument("--output-dir", required=True,
+                     help="directory where the report should be written")
+    prp.add_argument("--changed", required=True, help="one-line summary of what changed")
+    prp.add_argument("--worked", required=True, help="one-line summary of what worked")
+    prp.add_argument("--blocked", required=True, help="one-line summary of what is blocked")
+    prp.add_argument("--next", dest="next_action", required=True,
+                     help="one-line description of what happens next")
+    prp.add_argument("--json", action="store_true")
+    prp.set_defaults(func=_cmd_report)
 
     pc = sub.add_parser("context", help="project context resolution")
     csub = pc.add_subparsers(dest="ctx_cmd", required=True)

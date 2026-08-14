@@ -100,6 +100,18 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(code, exit_codes.SUCCESS)
         self.assertTrue(os.path.exists(json.loads(out)["packet"]))
 
+    def test_report_via_cli(self):
+        destination = tempfile.mkdtemp(prefix="psk-report-cli-")
+        self.addCleanup(shutil.rmtree, destination, True)
+        code, out = run([
+            "report", self.root, "--output-dir", destination,
+            "--changed", "Added reporting", "--worked", "Tests pass",
+            "--blocked", "Nothing", "--next", "Open the pull request", "--json",
+        ])
+        self.assertEqual(code, exit_codes.SUCCESS)
+        result = json.loads(out)
+        self.assertTrue(os.path.isfile(result["report"]))
+
 
     def test_review_request_via_cli_regression(self):
         # Regression: `review request` previously crashed unconditionally because
