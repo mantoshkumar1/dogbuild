@@ -156,6 +156,8 @@ implementations).
 | [`vision.md`](vision.md) | Full product vision: coordination/control layer, roles, control loop, first prototype vs. eventual product, milestone roadmap. |
 | [`PRODUCT.md`](PRODUCT.md) | What it is, dogfood→commercial path, Lite vs Pro. |
 | [`docs/authority-model.md`](docs/authority-model.md) | Roles, gate hierarchy (human > ChatGPT > agents > keeper), gate behavior. |
+| [`docs/authority-source-precedence.md`](docs/authority-source-precedence.md) | Deterministic current-policy precedence over WIP and historical sources. |
+| [`docs/releases/dogbuild-0.0.md`](docs/releases/dogbuild-0.0.md) | DogBuild 0.0 release-candidate guarantee and finalization record. |
 | [`docs/mvp-scope.md`](docs/mvp-scope.md) | Exactly what's in and out of the two-week MVP. |
 | [`docs/execution-plan.md`](docs/execution-plan.md) | 14-day build plan. |
 | [`docs/success-and-kill-criteria.md`](docs/success-and-kill-criteria.md) | When it worked; when to park it. |

@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from psk import context, core, gitutil, identity, registry
+from psk.authority_freshness import AuthorityClass
 from psk.errors import ValidationError
 from tests._helpers import cleanup, git, make_repo
 
@@ -103,6 +104,16 @@ class TestRegistry(unittest.TestCase):
 
 
 class TestContext(unittest.TestCase):
+    def test_bootstrap_source_classification_fails_closed_for_paused_wip(self):
+        result = context.classify_execution_sources(
+            [{"source_id": "pr-242", "repository": "pingstep", "branch": "future",
+              "commit_in_authoritative_history": False, "pr_state": "open", "paused": True}],
+            {"repository": "pingstep", "default_branch": "main", "current_task_id": "217",
+             "current_authoritative_source": "main:current", "requested_scope": "repository-policy"},
+        )
+        self.assertFalse(result["safe_to_use"])
+        self.assertEqual(result["decisions"][0]["classification"], AuthorityClass.PAUSED_UNMERGED.value)
+
     def test_identify_and_freshness(self):
         d = make_repo(with_commit=True)
         self.addCleanup(cleanup, d)

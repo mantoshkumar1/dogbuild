@@ -12,7 +12,7 @@ import enum
 from pathlib import Path
 from typing import Optional
 
-from . import gitutil, identity as identity_mod, store
+from . import authority_freshness, gitutil, identity as identity_mod, store
 from .util import new_uuid, now_iso, sha256_hex
 
 
@@ -22,6 +22,16 @@ class ContextResult(str, enum.Enum):
     UNKNOWN = "UNKNOWN"
     STALE = "STALE"
     MISMATCH = "MISMATCH"
+
+
+def classify_execution_sources(sources: list[dict], authority_context: dict) -> dict:
+    """Classify load-bearing referenced sources before bootstrap uses them.
+
+    Managed-project adapters supply the live authority facts.  This wrapper keeps
+    bootstrap/reconstruction callers on the same fail-closed primitive used by
+    handoff validation without teaching context resolution GitHub-specific rules.
+    """
+    return authority_freshness.classify_referenced_sources(sources, authority_context)
 
 
 def freshness(root: str) -> str:
