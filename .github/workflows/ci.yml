@@ -20,5 +20,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Check PR presentation contract
+        if: github.event_name == 'pull_request'
+        run: python scripts/check_pr_presentation.py "$GITHUB_EVENT_PATH"
+
       - name: Run test suite
         run: python -m unittest discover -s tests -v

@@ -1,3 +1,17 @@
+Refs #<issue> — partial; issue remains open
+<!-- For a PR that fully completes one issue, replace the line above with the plain, unformatted
+     directive `Closes #<issue>`. Delete this comment before submitting. -->
+
+## PR presentation contract
+
+Keep one execution record on the authoritative issue while making that record easy to find from this PR.
+
+- **Authoritative issue:** #<issue> — current execution status (for example, `In Progress`, `In Review`, or
+  `Done`).
+- **Project record:** Issue #<issue> in the configured GitHub Project — PR not a Project item.
+- **PR role:** full implementation / partial slice / reconciliation — state this PR's actual purpose.
+- **Closing semantics:** `partial slice` / `full completion`; this must match the plain top-of-body directive.
+
 ## Scope
 
 - **Objective / task:** what this PR does, in plain language.
