@@ -40,6 +40,18 @@ yet automate it (see "What is actually running" below). Full account:
   authority itself is still human-only regardless of CI result; see
   [`docs/authority-model.md`](docs/authority-model.md).
 
+## Releases
+
+### DogBuild 0.0 — First Official Release
+
+DogBuild 0.0 marks the point where enough real-world dogfooding through
+PingStep.dev exists to build the DogBuild skill from evidence rather than
+theory. The founder has verified the core milestone: multiple AI agents can
+participate in a real engineering control loop without requiring the founder to
+relay their routine communication.
+
+[Read the DogBuild 0.0 release record](docs/releases/dogbuild-0.0.md)
+
 ## Quickstart
 
 ```bash
@@ -156,6 +168,7 @@ implementations).
 | [`vision.md`](vision.md) | Full product vision: coordination/control layer, roles, control loop, first prototype vs. eventual product, milestone roadmap. |
 | [`PRODUCT.md`](PRODUCT.md) | What it is, dogfood→commercial path, Lite vs Pro. |
 | [`docs/authority-model.md`](docs/authority-model.md) | Roles, gate hierarchy (human > ChatGPT > agents > keeper), gate behavior. |
+| [`docs/releases/dogbuild-0.0.md`](docs/releases/dogbuild-0.0.md) | DogBuild 0.0 founder-verified release-history record and extraction boundary. |
 | [`docs/mvp-scope.md`](docs/mvp-scope.md) | Exactly what's in and out of the two-week MVP. |
 | [`docs/execution-plan.md`](docs/execution-plan.md) | 14-day build plan. |
 | [`docs/success-and-kill-criteria.md`](docs/success-and-kill-criteria.md) | When it worked; when to park it. |
