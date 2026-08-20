@@ -19,6 +19,14 @@ They are not a bidirectionally synchronized database.
 5. Repository commits and tests provide completion evidence; the project board
    reflects that result after verification.
 
+## Pull-request presentation
+
+DogBuild uses an issue-only GitHub Project ledger: the authoritative issue owns execution status, priority,
+blockers, and review state. A PR must not become a duplicate Project item merely to make that information
+visible. Instead, every PR body names the authoritative issue and current status, states that the issue is the
+Project record, describes the PR's role, and says whether it is a partial slice or a full completion. CI checks
+this structural contract from GitHub's local event payload whenever a pull request is opened or updated.
+
 ## Initialization rule
 
 Every repository initialized by DogBuild is independent by default. Upstream
