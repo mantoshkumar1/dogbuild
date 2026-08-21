@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional
 
-from . import agentmode, gitutil, identity as identity_mod, store
+from . import agentmode, authority_freshness, gitutil, identity as identity_mod, store
 from .errors import ProjectMismatchError, StateNotFoundError, ValidationError
 from .models import Event, EventType, SCHEMA_VERSION
 from .util import new_uuid, now_iso
@@ -32,7 +32,9 @@ def _event(type_: EventType, actor: str, **payload) -> Event:
 
 def create(path: str, *, to_agent: str, task: str, from_agent: str = "claude",
            instruction_from: str = "chatgpt", acceptance: str = "",
-           next_action: str = "", prohibited: Optional[List[str]] = None) -> tuple:
+           next_action: str = "", prohibited: Optional[List[str]] = None,
+           authority_sources: Optional[List[dict]] = None,
+           authority_context: Optional[dict] = None) -> tuple:
     root = gitutil.repo_root(path)
     if to_agent not in TARGETS:
         raise ValidationError(f"target must be one of {TARGETS}")
@@ -42,6 +44,16 @@ def create(path: str, *, to_agent: str, task: str, from_agent: str = "claude",
         raise ValidationError("no active scope with an id; run set_scope first")
     git = gitutil.capture_git_state(root)
     prohibited = prohibited or RESERVED_HUMAN_ACTIONS
+
+    authority_evaluation = None
+    if authority_sources:
+        if not authority_context:
+            raise ValidationError("authority_context is required for referenced authority sources")
+        authority_evaluation = authority_freshness.classify_referenced_sources(
+            authority_sources, authority_context
+        )
+        if not authority_evaluation["safe_to_use"]:
+            raise ValidationError("referenced authority source is not current policy")
 
     gc = state.goal_contract
     pid = new_uuid()
@@ -68,6 +80,8 @@ def create(path: str, *, to_agent: str, task: str, from_agent: str = "claude",
         "status": "outstanding",
         "created_at": ts,
     }
+    if authority_evaluation is not None:
+        rec["authority_source_evaluation"] = authority_evaluation
     state.handoffs[pid] = rec
     state.updated_at = ts
     store.save_state(root, state)

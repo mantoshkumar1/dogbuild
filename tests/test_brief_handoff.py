@@ -78,6 +78,16 @@ class TestBrief(Base):
 
 
 class TestHandoff(Base):
+    def test_handoff_rejects_non_current_referenced_policy(self):
+        with self.assertRaises(ValidationError):
+            handoff.create(
+                self.root, to_agent="claude", task="t",
+                authority_sources=[{"source_id": "future", "repository": "repo", "branch": "future",
+                                    "commit_in_authoritative_history": False, "pr_state": "open", "paused": True}],
+                authority_context={"repository": "repo", "default_branch": "main", "current_task_id": "217",
+                                   "current_authoritative_source": "main:current", "requested_scope": "repository-policy"},
+            )
+
     def test_generate_claude_and_codex(self):
         for target in ("claude", "codex"):
             pid, out = handoff.create(self.root, to_agent=target,
