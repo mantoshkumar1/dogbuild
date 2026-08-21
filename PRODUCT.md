@@ -38,11 +38,15 @@ distribution stay unvalidated until step 4 — see
 - *Your coding agents communicate with each other. You step in only when they disagree.*
 - *Give one AI authority. Let the others execute. Get interrupted only when the decision genuinely needs you.*
 
-## Lite vs Pro boundary
-The MVP builds **Lite only.** Pro is a marker for a *possible* later paid tier —
-not built now, and not evidence of demand.
+## Founder-first delivery boundary
 
-**Lite (the MVP; free / open, the dogfood):**
+The completed local-only MVP proved a protocol and a founder workflow; it did
+not remove the routine relay burden. The current product direction is to prove
+one **local runtime + GitHub rendezvous** loop for the founder before considering
+commercial packaging. This is a product-necessity sequence, not a commitment to
+hosted infrastructure or a paid tier.
+
+**Already built (local foundation):**
 - canonical project-state schema + local CLI;
 - state init & checkpointing;
 - evidence-backed status reconstruction (git + state file);
@@ -52,18 +56,25 @@ not built now, and not evidence of demand.
 - stale-decision + repository-identity/branch/commit validation;
 - deterministic authority gate (APPROVE / APPROVE_WITH_CONDITIONS / VETO / NEEDS_HUMAN);
 - thin Claude / Cursor / Codex adapters over one canonical protocol;
-- single repository, single user, local machine.
 
-**Pro (LATER — hypothesis only, explicitly out of MVP):**
-- automated ChatGPT via the OpenAI API (removes manual file exchange);
+**Next to prove (not built yet):**
+- one local runtime safely executes one GitHub-authorized issue;
+- planning-relevant facts become durable and GitHub-visible;
+- GitHub carries bounded commands and meaningful evidence-backed status;
+- a planning AI can resume one project remotely without the owner acting as a
+  courier; and
+- all irreversible actions remain owner-controlled.
+
+**Later commercial/product possibilities — hypothesis only:**
+- alternative planner integrations, including an API where evidence justifies it;
 - multi-repo / workspace orchestration;
 - shared/team state;
 - richer conflict reports and analytics;
 - hosted sync / dashboard;
 - additional adapters, templates, priority support.
 
-If the commercial test (step 4) is weak, Pro is not built and the tool is parked
-as a personal utility.
+If the commercial test (step 4) is weak, those later capabilities are not built
+and DogBuild remains a founder utility.
 
 ## Validated problems & product principles (added 2026-07-25)
 
@@ -82,10 +93,10 @@ experience.**
 **Principle:** *The user must not act as a routine courier between ChatGPT, Claude,
 and Codex.* Interrupt the user only for: `VETO`; `NEEDS_HUMAN`; an unresolved agent
 disagreement; insufficient evidence; stale/mismatched context that cannot be
-refreshed automatically; or irreversible/externally-consequential actions. Routine
-request/decision transport, import, verification, and continuation should
-eventually be automatic. **This automation does not exist yet** — the manual file
-bridge is a **temporary proof mechanism, not the target product experience.**
+refreshed automatically; or irreversible/externally-consequential actions. The
+remote-control MVP is the planned proof of automatic routine transport,
+verification, and continuation. **It does not exist yet** — manual exchange is a
+temporary proof mechanism, not the target experience.
 
 ### 2. Founder orientation loss
 ```yaml
