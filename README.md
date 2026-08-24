@@ -1,5 +1,11 @@
 # DogBuild
 
+## Copy-ready AI role prompts
+
+Use the [AI role prompt pack](docs/ai-role-prompts.md) to start a worker session. It provides copy-ready [Strategy-Control](docs/ai-role-prompts.md#opening-prompt--strategy-control), [Implementor](docs/ai-role-prompts.md#opening-prompt--implementor), [Independent Reviewer](docs/ai-role-prompts.md#opening-prompt--independent-reviewer--verifier), [Admin/Verifier](docs/ai-role-prompts.md#opening-prompt--deterministic-admin--project-verifier), optional [Copilot secondary-validator](docs/ai-role-prompts.md#optional-secondary-validator--github-copilot), and [closeout](docs/ai-role-prompts.md#closeout-prompt--all-roles) prompts.
+
+Current alpha mapping is ChatGPT → Strategy-Control; Claude and Codex rotate between Implementor and independent Reviewer according to capability and provenance. The prompt—rather than a vendor name—assigns the role. Use authenticated local Git/GitHub capability for ordinary mechanical work, preserve reviewer independence, and keep workers on separate admitted tasks when safe.
+
 [![CI](https://github.com/mantoshkumar1/dogbuild/actions/workflows/ci.yml/badge.svg)](https://github.com/mantoshkumar1/dogbuild/actions/workflows/ci.yml)
 
 A local, file-based **project interface and authority layer** between coding agents
