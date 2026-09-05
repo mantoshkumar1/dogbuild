@@ -49,15 +49,37 @@ a producer cannot hold independent-review authority over its own lineage.
 **No assertion means read-only.** An unsigned request gets common reads and
 nothing else. If `ROLE_ASSERTION_KEY` is unset, no role can be granted at all.
 
+### Write-target scoping
+
+A valid signature proves who issued the assertion, not what it permits.
+Every write is therefore additionally bound to a target the assertion names,
+and the check runs **before any upstream request is issued**:
+
+| Assertion field | Governs |
+|---|---|
+| `issues: [n, …]` | `update_issue`, `add_issue_comment`, `add_labels`, `remove_label`, `add_assignees`, `remove_assignees` |
+| `comments: [id, …]` | `update_issue_comment` |
+| `pull_requests: [n, …]` | `update_pull_request`, `publish_review` |
+| `projects: [n, …]` | `add_project_item`, `update_project_item_field` |
+| `branch: "…"` | `create_branch`, `create_or_update_file`, and the `head` of `create_pull_request` |
+| `allow_create_issue: true` | `create_issue` |
+
+Fail-closed by construction: an assertion that declares no list for a kind of
+object authorizes **no** write of that kind. Reads are unaffected — scoping
+governs writes, not visibility.
+
 ### Known limits, stated plainly
 
 - The Worker validates that an assertion is well-formed, unexpired, bound to
-  the requested repository, and not self-review. It cannot validate DogBuild's
-  wider lineage predicates — role locks after meaningful lineage start, control
-  generation, duplicate-effect prevention — because it holds no lineage state.
-  Those belong to the DogBuild-side issuer and auto-merger.
+  the requested repository and target, and not self-review. It cannot validate
+  DogBuild's wider lineage predicates — role locks after meaningful lineage
+  start, control generation, duplicate-effect prevention — because it holds no
+  lineage state. Those belong to the DogBuild-side issuer and auto-merger.
 - Nonces are carried and bound but not yet replay-checked server-side; the
   replay window is bounded only by the one-hour maximum lifetime.
+- `subject` is bound into the signature but cannot be independently verified
+  server-side: the Worker has no channel-level caller identity. Issuing the
+  right subject is the DogBuild issuer's responsibility.
 - The OAuth layer is ported unchanged from the reference Worker and is *not*
   the access control (`/mcp/<MCP_PATH_SECRET>` is). Strategy accepted it as
   existing state. Real client validation, short-lived access tokens and replay
@@ -70,7 +92,10 @@ nothing else. If `ROLE_ASSERTION_KEY` is unset, no role can be granted at all.
 2. **Exact SHA validation and binding.** 40 lowercase hex characters, and every
    returned record is verified to belong to that SHA or the call fails closed.
 3. **Complete pagination or explicit `incomplete: true`.** Never a silent truncation.
-4. **One normalized CI verdict:** `pending | success | failure | neutral | unknown`.
+4. **One normalized CI verdict:** `pending | success | failure | neutral | unknown`,
+   folded from **every** retrieved signal — check-runs, legacy commit statuses,
+   workflow runs per attempt, and their jobs. `evidence_breakdown` reports the
+   count from each source, so retrieved-but-uncounted evidence is visible.
 5. **Comment updates** use `expected_updated_at`, bounded body size, stable
    comment id, and a returned `body_sha256`.
 6. **Exact-head re-read** immediately before publishing a review; a moved head rejects.
@@ -90,8 +115,9 @@ nothing else. If `ROLE_ASSERTION_KEY` is unset, no role can be granted at all.
 
 `get_commit_ci` is deliberately conservative: absent, incomplete, ambiguous or
 head-mismatched evidence resolves to `unknown`. It will never report green by
-absence — reporting a false green would be a worse failure than the browser
-dependency this package removes.
+absence, and it will never report green while any retrieved run or job failed —
+reporting a false green would be a worse failure than the browser dependency
+this package removes.
 
 ## Configuration
 
@@ -108,10 +134,12 @@ cd packages/github-control-worker && npm test
 Fully offline: `fetch` is mocked, no network, no credentials, no browser. The
 suite covers allowlist denial before any request, SHA validation and binding,
 pagination completeness and truncation, the never-green-by-absence rule, the
-full normalization vocabulary, stale-version refusal before any write, comment
-idempotency, the error-class taxonomy, role forgery/expiry/replay/self-review
-rejection, argument-supplied roles being ignored, profile isolation, and static
-proof that no source file references a browser or spawns a process.
+full normalization vocabulary, failed workflow runs and jobs dominating passing
+check-runs, stale-version refusal before any write, comment idempotency, the
+error-class taxonomy, role forgery/expiry/replay/self-review rejection,
+argument-supplied roles being ignored, write-target scope denial with zero
+upstream requests, profile isolation, and static proof that no source file
+references a browser or spawns a process.
 
 ## Status
 
