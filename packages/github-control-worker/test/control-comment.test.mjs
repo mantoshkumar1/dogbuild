@@ -33,10 +33,42 @@ test("configuration parsing is fail-closed", () => {
   for (const bad of ["not-a-target", "owner/repo", "owner/repo#", "owner#123", "owner/repo#abc", "a/b#1,broken"]) {
     assert.throws(() => parseControlComments({ CONTROL_COMMENTS: bad }), (e) => e.class === ErrorClass.CONTROL_TARGET_DENIED, bad);
   }
+  // Regression (review of PR #166): blank fields must not be dropped before
+  // validation, or an operator typo leaves the remaining targets authorized.
+  for (const typo of [
+    `mantoshkumar1/pingstep#${SLOT},`,
+    `,mantoshkumar1/pingstep#${SLOT}`,
+    `mantoshkumar1/pingstep#${SLOT},,mantoshkumar1/dogbuild#1`,
+    `mantoshkumar1/pingstep#${SLOT}, ,mantoshkumar1/dogbuild#1`,
+    ",",
+    ",,",
+  ]) {
+    assert.throws(
+      () => parseControlComments({ CONTROL_COMMENTS: typo }),
+      (e) => e.class === ErrorClass.CONTROL_TARGET_DENIED,
+      `a malformed list must deny every target, not just the blank field: ${JSON.stringify(typo)}`
+    );
+  }
   assert.deepEqual(parseControlComments({ CONTROL_COMMENTS: "Owner/Repo#7, a/b#9" }), [
     { owner: "owner", repo: "repo", comment_id: 7 },
     { owner: "a", repo: "b", comment_id: 9 },
   ]);
+});
+
+test("a typo'd list denies even its own well-formed entries, before any request", async () => {
+  for (const typo of [
+    `mantoshkumar1/pingstep#${SLOT},`,
+    `,mantoshkumar1/pingstep#${SLOT}`,
+    `mantoshkumar1/pingstep#${SLOT},,mantoshkumar1/dogbuild#1`,
+  ]) {
+    const calls = mockFetch(routes());
+    await assert.rejects(
+      callTool({ ...ENV, CONTROL_COMMENTS: typo }, "update_control_comment", { ...OK, body: "x", expected_updated_at: "2026-09-05T13:00:00Z" }, READ_CTX),
+      (e) => e.class === ErrorClass.CONTROL_TARGET_DENIED,
+      `the otherwise-valid entry in ${JSON.stringify(typo)} must not stay live`
+    );
+    assert.equal(calls.length, 0, "a malformed configuration must issue no upstream request");
+  }
 });
 
 test("with no configuration, every control write is refused and issues no request", async () => {
