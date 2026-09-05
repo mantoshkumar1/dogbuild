@@ -126,6 +126,16 @@ test("project writes are bound to the asserted project", async () => {
   assert.equal(calls.length, 0);
 });
 
+test("a project field update is bound to the exact project item id", async () => {
+  const ctx = await ctxFor("implementor", { projects: [3], project_items: ["PVTI_authorized"] });
+  const calls = mockFetch();
+  await assert.rejects(
+    callTool(ENV, "update_project_item_field", { login: "mantoshkumar1", project_number: 3, item_id: "PVTI_other", field_id: "F", text: "v" }, ctx),
+    (e) => e.class === ErrorClass.TARGET_NOT_IN_SCOPE
+  );
+  assert.equal(calls.length, 0, "an out-of-scope item must not reach GraphQL");
+});
+
 test("reads are unaffected by write scoping", async () => {
   const ctx = await ctxFor("implementor", {});
   mockFetch({ "GET /repos/mantoshkumar1/pingstep/issues/999": { body: { number: 999, title: "t", labels: [] } } });
