@@ -6,7 +6,11 @@
  *   - the caller supplies one exact 40-character SHA;
  *   - every returned record is verified to belong to that SHA;
  *   - pagination is complete or the result is explicitly `incomplete`;
- *   - absent, incomplete or ambiguous evidence is `unknown`, never `success`.
+ *   - absent, incomplete or ambiguous evidence is `unknown`, never `success`;
+ *   - EVERY retrieved signal contributes to the verdict — check-runs, legacy
+ *     commit statuses, workflow runs (per attempt) and their jobs. Retrieving
+ *     a failed workflow and reporting `success` from the check-runs alone was
+ *     the false-green defect found in review DB-164-CODEX-...-REVIEW-01.
  */
 import { ControlError, ErrorClass } from "./errors.js";
 import { assertExactSha, gh, ghPaginate } from "./github.js";
@@ -127,13 +131,22 @@ export async function getCommitCi(env, { owner, repo, sha }) {
   const statusStates = (combined && Array.isArray(combined.statuses) ? combined.statuses : []).map((s) =>
     normalizeCommitStatus(s.state)
   );
-  const overall = foldOverall([...checkStates, ...statusStates], incomplete);
+  const runStates = runs.items.map(normalizeCheckRun);
+  const jobStates = jobs.map((j) => j.normalized);
+  const allStates = [...checkStates, ...statusStates, ...runStates, ...jobStates];
+  const overall = foldOverall(allStates, incomplete);
 
   return {
     sha,
     overall,
     incomplete,
-    evidence_count: checkStates.length + statusStates.length,
+    evidence_count: allStates.length,
+    evidence_breakdown: {
+      check_runs: checkStates.length,
+      commit_statuses: statusStates.length,
+      workflow_runs: runStates.length,
+      jobs: jobStates.length,
+    },
     check_runs: checks.items.map((c) => ({
       id: c.id,
       name: c.name,
