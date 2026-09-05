@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { TOOLS, findTool, toolsForRole } from "../src/tools.js";
 import { callTool } from "../src/handlers.js";
 import { ErrorClass } from "../src/errors.js";
-import { ENV, SHA, OTHER_SHA, mockFetch } from "./helpers.mjs";
+import { ENV, SHA, OTHER_SHA, ctxFor, mockFetch } from "./helpers.mjs";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "src");
 const sources = readdirSync(SRC).filter((f) => f.endsWith(".js")).map((f) => ({ file: f, text: readFileSync(join(SRC, f), "utf8") }));
@@ -52,7 +52,8 @@ test("publish_review can only ever submit COMMENT", async () => {
     "GET /repos/mantoshkumar1/pingstep/pulls/1": { body: { head: { sha: SHA } } },
     "POST /repos/mantoshkumar1/pingstep/pulls/1/reviews": { body: { id: 7, state: "COMMENTED", commit_id: SHA } },
   });
-  await callTool(ENV, "publish_review", { owner: "mantoshkumar1", repo: "pingstep", pull_number: 1, expected_head_sha: SHA, body: "b", event: "APPROVE" }, { role: "reviewer" });
+  const ctx = await ctxFor("reviewer", { pull_requests: [1] });
+  await callTool(ENV, "publish_review", { owner: "mantoshkumar1", repo: "pingstep", pull_number: 1, expected_head_sha: SHA, body: "b", event: "APPROVE" }, ctx);
   const post = calls.find((c) => c.method === "POST");
   assert.equal(post.body.event, "COMMENT", "an argument-supplied event must not become an approval");
   assert.equal(post.body.commit_id, SHA);
@@ -61,7 +62,7 @@ test("publish_review can only ever submit COMMENT", async () => {
 test("a moved head rejects before the review is published", async () => {
   const calls = mockFetch({ "GET /repos/mantoshkumar1/pingstep/pulls/1": { body: { head: { sha: OTHER_SHA } } } });
   await assert.rejects(
-    callTool(ENV, "publish_review", { owner: "mantoshkumar1", repo: "pingstep", pull_number: 1, expected_head_sha: SHA, body: "b" }, { role: "reviewer" }),
+    callTool(ENV, "publish_review", { owner: "mantoshkumar1", repo: "pingstep", pull_number: 1, expected_head_sha: SHA, body: "b" }, await ctxFor("reviewer", { pull_requests: [1] })),
     (e) => e.class === ErrorClass.HEAD_MISMATCH
   );
   assert.equal(calls.filter((c) => c.method === "POST").length, 0);
@@ -105,9 +106,15 @@ test("no handler can reach a destructive or privileged endpoint", async () => {
     if (t.name === "update_project_item_field") a.text = "v";
     return a;
   };
+  const scopes = { issues: [1], pull_requests: [1], comments: [1], projects: [1], branch: "db-164-task-branch", allow_create_issue: true };
+  const ctxCache = {
+    read: await ctxFor("implementor", scopes),
+    implementor: await ctxFor("implementor", scopes),
+    reviewer: await ctxFor("reviewer", scopes),
+  };
   for (const t of TOOLS) {
     try {
-      await callTool(ENV, t.name, argsFor(t), { role: t.profiles[0] === "read" ? "read" : t.profiles[0] });
+      await callTool(ENV, t.name, argsFor(t), ctxCache[t.profiles[0]]);
     } catch {
       /* shape errors from the generic mock are fine; we only audit the requests */
     }
