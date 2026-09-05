@@ -10,12 +10,14 @@
  */
 import { ControlError, ErrorClass } from "./errors.js";
 import { assertRepoAllowed, assertWritableBranch } from "./allowlist.js";
+import { assertControlComment } from "./control-comments.js";
 import { assertAssertionCoversRepo, assertAssertedBranch, assertTargetInScope } from "./roles.js";
 import { findTool } from "./tools.js";
 import { getCommitCi } from "./ci.js";
 import { assertExactSha, gh, ghGraphql, ghPaginate, sha256Hex } from "./github.js";
 
 export const MAX_COMMENT_BODY_BYTES = 60000;
+export const MAX_CONTROL_BODY_BYTES = 30000;
 export const MAX_FILE_BYTES = 512000;
 
 function b64encode(str) {
@@ -25,13 +27,13 @@ function b64decode(str) {
   return decodeURIComponent(escape(atob(String(str).replace(/\n/g, ""))));
 }
 
-function assertBoundedBody(body) {
+function assertBoundedBody(body, limit = MAX_COMMENT_BODY_BYTES) {
   if (typeof body !== "string" || !body.length) {
     throw new ControlError(ErrorClass.INVALID_INPUT, "body is required.");
   }
   const bytes = new TextEncoder().encode(body).length;
-  if (bytes > MAX_COMMENT_BODY_BYTES) {
-    throw new ControlError(ErrorClass.INVALID_INPUT, `body exceeds the ${MAX_COMMENT_BODY_BYTES}-byte limit.`, {
+  if (bytes > limit) {
+    throw new ControlError(ErrorClass.INVALID_INPUT, `body exceeds the ${limit}-byte limit.`, {
       bytes,
     });
   }
@@ -43,6 +45,9 @@ function assertBoundedBody(body) {
  * runs BEFORE any upstream request. Signature verification alone is not
  * authorization: it proves the assertion is genuine, not that this particular
  * issue, PR, comment, project or branch is in scope.
+ *
+ * `update_control_comment` is deliberately absent here: its authority comes
+ * from Worker configuration instead, enforced in its own handler.
  */
 function assertWriteScope(name, args, assertion) {
   switch (name) {
@@ -295,6 +300,45 @@ export async function callTool(env, name, args = {}, ctx = {}) {
         throw new ControlError(ErrorClass.CONFLICT, "Updated comment identity does not match the requested id.");
       }
       return { repo: `${owner}/${repo}`, comment_id: d.id, updated_at: d.updated_at, html_url: d.html_url, body_sha256: await sha256Hex(args.body) };
+    }
+    case "update_control_comment": {
+      // Authority comes from configuration, not from the caller and not from a
+      // role assertion: the target must be pinned in CONTROL_COMMENTS.
+      assertControlComment(env, owner, repo, args.comment_id);
+      assertBoundedBody(args.body, MAX_CONTROL_BODY_BYTES);
+      if (typeof args.expected_updated_at !== "string" || !args.expected_updated_at) {
+        throw new ControlError(
+          ErrorClass.INVALID_INPUT,
+          "expected_updated_at is required for a control comment; blind overwrites are refused."
+        );
+      }
+      const current = await gh(env, `${base()}/issues/comments/${args.comment_id}`);
+      if (current.id !== args.comment_id) {
+        throw new ControlError(ErrorClass.CONFLICT, "Returned comment identity does not match the requested id.");
+      }
+      if (current.updated_at !== args.expected_updated_at) {
+        throw new ControlError(ErrorClass.STALE_VERSION, "Control comment changed since it was read; refusing to overwrite.", {
+          expected_updated_at: args.expected_updated_at,
+          actual_updated_at: current.updated_at,
+        });
+      }
+      const d = await gh(env, `${base()}/issues/comments/${args.comment_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: args.body }),
+      });
+      if (d.id !== args.comment_id) {
+        throw new ControlError(ErrorClass.CONFLICT, "Updated comment identity does not match the requested id.");
+      }
+      // Metadata only — the body is never echoed back.
+      return {
+        repo: `${owner}/${repo}`,
+        comment_id: d.id,
+        updated_at: d.updated_at,
+        html_url: d.html_url,
+        body_sha256: await sha256Hex(args.body),
+        body_bytes: new TextEncoder().encode(args.body).length,
+      };
     }
     case "publish_review": {
       assertExactSha(args.expected_head_sha);

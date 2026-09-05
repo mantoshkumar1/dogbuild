@@ -21,10 +21,10 @@ leaves nothing behind to reap.
 > cause of the process accumulation it replaces. The exception covers this
 > package only and does not relax DogBuild's local-first rules anywhere else.
 
-## Current status: read-only until a trusted identity transport exists
+## Current status: role-gated writes are off until a trusted identity transport exists
 
-**`CAPABILITY_BLOCKED_ROLE_TRANSPORT`.** Every mutating profile is unreachable
-in the shipped configuration, deliberately.
+**`CAPABILITY_BLOCKED_ROLE_TRANSPORT`.** Every *role-gated* mutating tool is
+unreachable in the shipped configuration, deliberately.
 
 A role assertion is delivered as a request header. On a transport that does not
 authenticate its caller, that is a **bearer token**: whoever holds it can
@@ -37,10 +37,13 @@ today.
 
 Rather than simulate conformance, the Worker fails closed: unless
 `ROLE_TRANSPORT` names a trusted transport, **any presented assertion is
-ignored and the server serves reads only**. Enabling it is a founder decision
-that should follow a real identity path — DogBuild as an OAuth issuer minting
-short-lived per-task tokens, per-task endpoint credentials, or mTLS — not a
-configuration flip.
+ignored and every role-gated write is refused**. Enabling it is a founder
+decision that should follow a real identity path — DogBuild as an OAuth issuer
+minting short-lived per-task tokens, per-task endpoint credentials, or mTLS —
+not a configuration flip.
+
+The single exception is `update_control_comment`, whose authority comes from
+configuration rather than identity; see below.
 
 What *is* enforced once a trusted transport exists: signature, expiry, lifetime
 cap, endpoint binding (`aud`), repository coverage, per-target write scope, and
@@ -54,7 +57,7 @@ outside your profile is unreachable, not merely undocumented.
 
 | Profile | Gets |
 |---|---|
-| `read` | All common reads: issues and comments; exact PR state, base/head SHAs, files, commit lineage, reviews, review threads; bounded file reads; `get_commit_ci`; workflow jobs and artifact metadata; Projects-v2 readback. |
+| `read` | All common reads: issues and comments; exact PR state, base/head SHAs, files, commit lineage, reviews, review threads; bounded file reads; `get_commit_ci`; workflow jobs and artifact metadata; Projects-v2 readback — plus `update_control_comment`, whose targets are pinned in configuration. |
 | `implementor` | Common reads, plus issue/PR metadata create-update, bounded comments, labels, assignees, task-branch creation and file writes, PR open/update, Projects-v2 field updates. |
 | `reviewer` | Common reads, plus one exact-head `COMMENT` review, one terminal handoff comment, and in-place status-comment update with optimistic concurrency. |
 
@@ -81,8 +84,8 @@ signature that does not verify.
 ### Write-target scoping
 
 A valid signature proves who issued the assertion, not what it permits.
-Every write is therefore additionally bound to a target the assertion names,
-and the check runs **before any upstream request is issued**:
+Every role-gated write is therefore additionally bound to a target the
+assertion names, and the check runs **before any upstream request is issued**:
 
 | Assertion field | Governs |
 |---|---|
@@ -98,10 +101,44 @@ Fail-closed by construction: an assertion that declares no list for a kind of
 object authorizes **no** write of that kind. Reads are unaffected — scoping
 governs writes, not visibility.
 
+### `update_control_comment` — the one configuration-pinned write
+
+The status slot a scheduled worker rewrites each wake is a fixed, tiny set of
+comments. `update_control_comment` takes its authority from Worker
+**configuration** rather than from caller identity, so the one write a headless
+worker genuinely needs stays available while `ROLE_TRANSPORT` is still blocked.
+
+```
+CONTROL_COMMENTS = "mantoshkumar1/pingstep#5498666442"
+```
+
+Constraints, all enforced server-side:
+
+- **The target cannot be chosen by the caller.** It must appear verbatim in
+  `CONTROL_COMMENTS`. Unset or malformed configuration denies every control
+  write — there is no "unset means unrestricted" path.
+- **The repository allowlist still applies** on top of the control list.
+- **`expected_updated_at` is mandatory**, unlike `update_issue_comment` where
+  it is optional. A blind overwrite is refused before the comment is even read.
+- **The body is bounded** at 30,000 bytes — tighter than an ordinary comment.
+- **Only metadata is returned:** repo, comment id, `updated_at`, URL,
+  `body_sha256`, `body_bytes`. The body is never echoed back.
+- **A role assertion cannot widen it.** An implementor whose assertion scopes
+  some other comment still cannot rewrite it through this tool.
+
+Understand the trade this makes: because its authority is configuration, this
+tool is reachable without a signed assertion. Its blast radius is exactly the
+comment ids you list — nothing else in the repository — and every other target
+is refused before any request is issued. Keep the list to the actual status
+slots. If Strategy would rather this wait for signed identity too, changing its
+`profiles` entry from every profile to a signed-only profile is a one-line
+change.
+
 ### Known limits, stated plainly
 
 - **Subject identity is not server-verifiable on the current transport.** See
-  the status section above. This is why writes are disabled by default.
+  the status section above. This is why role-gated writes are disabled by
+  default, and why `update_control_comment` is pinned by configuration instead.
 - The Worker cannot validate DogBuild's wider lineage predicates — role locks
   after meaningful lineage start, control generation, duplicate-effect
   prevention — because it holds no lineage state. Those belong to the
@@ -127,7 +164,8 @@ governs writes, not visibility.
    workflow runs per attempt, and their jobs. `evidence_breakdown` reports the
    count from each source, so retrieved-but-uncounted evidence is visible.
 5. **Comment updates** use `expected_updated_at`, bounded body size, stable
-   comment id, and a returned `body_sha256`.
+   comment id, and a returned `body_sha256`. For control comments the
+   concurrency token is mandatory and only metadata is returned.
 6. **Exact-head re-read** immediately before publishing a review; a moved head rejects.
 7. **Deterministic error classes** for timeout, rate limit, 401, 403, 404, 409,
    422 and malformed upstream responses.
@@ -153,7 +191,8 @@ this package removes.
 
 See `wrangler.toml.example`. Secrets are set with `wrangler secret put` and
 never committed. `ALLOWED_REPOS`, `ROLE_ASSERTION_KEY` and `ROLE_TRANSPORT` are
-all required before any write path functions.
+all required before any role-gated write path functions; `CONTROL_COMMENTS` is
+required before any control-comment write functions.
 
 ## Tests
 
@@ -169,9 +208,10 @@ check-runs, stale-version refusal before any write, comment idempotency, the
 error-class taxonomy, role forgery/expiry/replay/self-review rejection,
 endpoint-binding rejection, untrusted-transport downgrade, argument-supplied
 roles being ignored, write-target scope denial with zero upstream requests,
-profile isolation, request-level `tools/list` and `tools/call` behaviour driven
-through the real `fetch` handler, and static proof that no source file
-references a browser or spawns a process.
+control-comment configuration parsing and the rejection of every non-configured
+control target, profile isolation, request-level `tools/list` and `tools/call`
+behaviour driven through the real `fetch` handler, and static proof that no
+source file references a browser or spawns a process.
 
 ## Status
 
