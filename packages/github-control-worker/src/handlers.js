@@ -73,8 +73,10 @@ function assertWriteScope(name, args, assertion) {
     case "create_or_update_file":
       return assertAssertedBranch(assertion);
     case "add_project_item":
-    case "update_project_item_field":
       return assertTargetInScope(assertion, "projects", args.project_number);
+    case "update_project_item_field":
+      assertTargetInScope(assertion, "projects", args.project_number);
+      return assertTargetInScope(assertion, "project_items", args.item_id);
     case "create_issue":
       if (!assertion || assertion.allow_create_issue !== true) {
         throw new ControlError(
