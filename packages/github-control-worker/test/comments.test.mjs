@@ -2,11 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { callTool, MAX_COMMENT_BODY_BYTES } from "../src/handlers.js";
 import { ErrorClass } from "../src/errors.js";
-import { ENV, mockFetch } from "./helpers.mjs";
+import { ENV, ctxFor, mockFetch } from "./helpers.mjs";
 
 const BASE = "/repos/mantoshkumar1/pingstep";
 const ARGS = { owner: "mantoshkumar1", repo: "pingstep", comment_id: 5498666442 };
-const CTX = { role: "reviewer" };
+const CTX = await ctxFor("reviewer", { comments: [5498666442] });
 
 test("a stale expected_updated_at is refused BEFORE any write", async () => {
   const calls = mockFetch({
