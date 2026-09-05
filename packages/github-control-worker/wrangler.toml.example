@@ -1,0 +1,16 @@
+# Example only. Copy to wrangler.toml locally; never commit real values.
+# Secrets are set with `wrangler secret put <NAME>` and never live in this file.
+#
+#   GITHUB_TOKEN        machine-identity token, repo-scoped to the allowlist
+#   MCP_PATH_SECRET     path segment gating /mcp/<secret>
+#   ALLOWED_REPOS       REQUIRED. e.g. "mantoshkumar1/pingstep,mantoshkumar1/dogbuild"
+#                       Unset or malformed denies every repository.
+#   ROLE_ASSERTION_KEY  HMAC key DogBuild signs request-scoped role assertions with.
+#                       Unset means no role can be granted: reads only.
+#   PROJECT_TOKEN       optional, isolated Projects-v2 credential. Never used
+#                       for general GitHub operations.
+#   OAUTH_CLIENT_ID / OAUTH_CLIENT_SECRET   connector handshake only.
+
+name = "dogbuild-github-control-worker"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
