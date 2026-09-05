@@ -4,12 +4,13 @@
  *   2. the caller's server-resolved role must include it;
  *   3. the repository must be on the hard allowlist;
  *   4. the role assertion, when present, must cover that repository;
- *   5. only then is any GitHub request issued.
+ *   5. the write target must be inside the assertion's declared scope;
+ *   6. only then is any GitHub request issued.
  * A failure at any step happens before a single upstream call is made.
  */
 import { ControlError, ErrorClass } from "./errors.js";
 import { assertRepoAllowed, assertWritableBranch } from "./allowlist.js";
-import { assertAssertionCoversRepo } from "./roles.js";
+import { assertAssertionCoversRepo, assertAssertedBranch, assertTargetInScope } from "./roles.js";
 import { findTool } from "./tools.js";
 import { getCommitCi } from "./ci.js";
 import { assertExactSha, gh, ghGraphql, ghPaginate, sha256Hex } from "./github.js";
@@ -37,6 +38,56 @@ function assertBoundedBody(body) {
   return body;
 }
 
+/**
+ * Every write is bound to a target the signed assertion names, and the check
+ * runs BEFORE any upstream request. Signature verification alone is not
+ * authorization: it proves the assertion is genuine, not that this particular
+ * issue, PR, comment, project or branch is in scope.
+ */
+function assertWriteScope(name, args, assertion) {
+  switch (name) {
+    case "update_issue":
+    case "add_labels":
+    case "remove_label":
+    case "add_assignees":
+    case "remove_assignees":
+    case "add_issue_comment":
+      return assertTargetInScope(assertion, "issues", args.issue_number);
+    case "update_issue_comment":
+      return assertTargetInScope(assertion, "comments", args.comment_id);
+    case "update_pull_request":
+    case "publish_review":
+      return assertTargetInScope(assertion, "pull_requests", args.pull_number);
+    case "create_pull_request": {
+      const branch = assertAssertedBranch(assertion);
+      if (args.head !== branch) {
+        throw new ControlError(
+          ErrorClass.BRANCH_DENIED,
+          `A pull request may only be opened from the authorized branch ('${branch}').`,
+          { requested_head: args.head }
+        );
+      }
+      return branch;
+    }
+    case "create_branch":
+    case "create_or_update_file":
+      return assertAssertedBranch(assertion);
+    case "add_project_item":
+    case "update_project_item_field":
+      return assertTargetInScope(assertion, "projects", args.project_number);
+    case "create_issue":
+      if (!assertion || assertion.allow_create_issue !== true) {
+        throw new ControlError(
+          ErrorClass.TARGET_NOT_IN_SCOPE,
+          "Role assertion does not authorize issue creation (allow_create_issue is not true)."
+        );
+      }
+      return true;
+    default:
+      return null; // reads need no target scope
+  }
+}
+
 export async function callTool(env, name, args = {}, ctx = {}) {
   const tool = findTool(name);
   if (!tool) throw new ControlError(ErrorClass.UNKNOWN_TOOL, `Unknown tool: ${name}`);
@@ -53,6 +104,10 @@ export async function callTool(env, name, args = {}, ctx = {}) {
     assertRepoAllowed(env, owner, repo);
     assertAssertionCoversRepo(ctx.assertion, owner, repo);
   }
+
+  // Bind the write to an asserted target before any upstream call is made.
+  assertWriteScope(name, args, ctx.assertion);
+
   const base = () => `/repos/${owner}/${repo}`;
   const authorizedBranch = ctx.assertion && ctx.assertion.branch ? ctx.assertion.branch : null;
 
