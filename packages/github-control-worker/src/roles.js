@@ -12,14 +12,50 @@
  * Signed assertion format (compact, HMAC-SHA256):
  *   base64url(JSON payload) + "." + base64url(signature)
  * Payload fields: role, task, repo, branch?, subject, producer?, exp (ms), nonce,
- * plus the write-scope lists issues?, pull_requests?, comments?, projects?,
- * allow_create_issue?.
+ * aud (endpoint binding), plus the write-scope lists issues?, pull_requests?,
+ * comments?, projects?, project_items?, allow_create_issue?.
  */
 import { ControlError, ErrorClass } from "./errors.js";
+import { sha256Hex } from "./github.js";
 
 export const ROLES = ["read", "implementor", "reviewer"];
 export const ROLE_ASSERTION_HEADER = "x-dogbuild-role-assertion";
 export const MAX_ASSERTION_LIFETIME_MS = 60 * 60 * 1000;
+
+/**
+ * Transports whose caller identity this Worker is willing to trust.
+ *
+ * A signed assertion arriving on an untrusted transport is a BEARER token,
+ * not an identity: anyone holding it can present it. Strategy requires that
+ * subject identity be server-verifiable through the trusted connector/auth
+ * path and that we fail closed rather than simulate conformance, so a
+ * deployment with no trusted transport configured serves READ-ONLY no matter
+ * what assertion is presented.
+ */
+export const TRUSTED_ROLE_TRANSPORTS = ["dogbuild-signed-request"];
+
+export function roleTransportMode(env) {
+  return (env && env.ROLE_TRANSPORT) || "none";
+}
+export function isTrustedRoleTransport(env) {
+  return TRUSTED_ROLE_TRANSPORTS.includes(roleTransportMode(env));
+}
+
+/**
+ * Bind the assertion to THIS endpoint. `aud` is the SHA-256 of the path
+ * secret the request arrived on, so a token minted for one connector URL
+ * cannot be replayed against another.
+ */
+export async function assertAudienceBinding(env, payload) {
+  if (!payload.aud) {
+    throw new ControlError(ErrorClass.ROLE_DENIED, "Role assertion carries no endpoint binding (aud).");
+  }
+  const expected = await sha256Hex(String(env.MCP_PATH_SECRET || ""));
+  if (payload.aud !== expected) {
+    throw new ControlError(ErrorClass.ROLE_DENIED, "Role assertion is bound to a different endpoint.");
+  }
+  return true;
+}
 
 function b64urlToString(str) {
   let s = String(str).replace(/-/g, "+").replace(/_/g, "/");
@@ -101,9 +137,16 @@ export async function verifyRoleAssertion(env, assertion, now = Date.now()) {
  * No assertion => read-only. This is the fail-closed default.
  */
 export async function resolveRole(env, headerValue, now = Date.now()) {
-  if (!headerValue) return { role: "read", assertion: null };
+  const transport = roleTransportMode(env);
+  if (!headerValue) return { role: "read", assertion: null, transport };
+  if (!isTrustedRoleTransport(env)) {
+    // An assertion was presented, but this deployment has no trusted identity
+    // transport. Downgrade to read-only rather than honour a bearer claim.
+    return { role: "read", assertion: null, transport, assertion_ignored: true };
+  }
   const payload = await verifyRoleAssertion(env, headerValue, now);
-  return { role: payload.role, assertion: payload };
+  await assertAudienceBinding(env, payload);
+  return { role: payload.role, assertion: payload, transport };
 }
 
 /**
