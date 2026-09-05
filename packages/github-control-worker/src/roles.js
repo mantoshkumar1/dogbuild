@@ -11,7 +11,9 @@
  *
  * Signed assertion format (compact, HMAC-SHA256):
  *   base64url(JSON payload) + "." + base64url(signature)
- * Payload fields: role, task, repo, branch?, subject, producer?, exp (ms), nonce.
+ * Payload fields: role, task, repo, branch?, subject, producer?, exp (ms), nonce,
+ * plus the write-scope lists issues?, pull_requests?, comments?, projects?,
+ * allow_create_issue?.
  */
 import { ControlError, ErrorClass } from "./errors.js";
 
@@ -102,6 +104,48 @@ export async function resolveRole(env, headerValue, now = Date.now()) {
   if (!headerValue) return { role: "read", assertion: null };
   const payload = await verifyRoleAssertion(env, headerValue, now);
   return { role: payload.role, assertion: payload };
+}
+
+/**
+ * Bind a write to a target the assertion actually names.
+ *
+ * Fail-closed: an assertion that declares no scope list for the kind of
+ * object being written authorizes NOTHING of that kind. Verifying the
+ * signature only proved who issued the assertion, not what it permits — that
+ * gap was the authorization defect found in review
+ * DB-164-CODEX-GITHUB-CONTROL-TOOLS-IMPLEMENTATION-REVIEW-01.
+ */
+export function assertTargetInScope(assertion, kind, value) {
+  if (!assertion) {
+    throw new ControlError(ErrorClass.ROLE_DENIED, "A signed role assertion is required for this write.");
+  }
+  const list = assertion[kind];
+  if (!Array.isArray(list) || list.length === 0) {
+    throw new ControlError(
+      ErrorClass.TARGET_NOT_IN_SCOPE,
+      `Role assertion declares no '${kind}' scope, so no ${kind} target is authorized.`,
+      { kind, requested: value }
+    );
+  }
+  if (!list.includes(value)) {
+    throw new ControlError(
+      ErrorClass.TARGET_NOT_IN_SCOPE,
+      `Target is outside the '${kind}' scope of this role assertion.`,
+      { kind, requested: value }
+    );
+  }
+  return value;
+}
+
+/** Branch and file writes require the assertion to name the authorized branch. */
+export function assertAssertedBranch(assertion) {
+  if (!assertion || !assertion.branch) {
+    throw new ControlError(
+      ErrorClass.BRANCH_DENIED,
+      "Role assertion names no authorized branch; branch and file writes are refused."
+    );
+  }
+  return assertion.branch;
 }
 
 export function assertAssertionCoversRepo(assertion, owner, repo) {
