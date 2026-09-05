@@ -7,14 +7,21 @@
 #                       Unset or malformed denies every repository.
 #   ROLE_ASSERTION_KEY  HMAC key DogBuild signs request-scoped role assertions with.
 #                       Unset means no role can be granted: reads only.
-#   ROLE_TRANSPORT      REQUIRED for any write. Names the transport whose caller
-#                       identity this Worker trusts. Only "dogbuild-signed-request"
-#                       is recognised. Unset (the default) means every presented
-#                       assertion is IGNORED and the server is read-only — a
-#                       signed token on an untrusted transport is a bearer
-#                       credential, not an identity. Do not set this until a
-#                       trusted identity path actually exists; see the README's
-#                       CAPABILITY_BLOCKED_ROLE_TRANSPORT note.
+#   ROLE_TRANSPORT      REQUIRED for any role-gated write. Names the transport
+#                       whose caller identity this Worker trusts. Only
+#                       "dogbuild-signed-request" is recognised. Unset (the
+#                       default) means every presented assertion is IGNORED and
+#                       the server is read-only — a signed token on an untrusted
+#                       transport is a bearer credential, not an identity. Do not
+#                       set this until a trusted identity path actually exists;
+#                       see the README's CAPABILITY_BLOCKED_ROLE_TRANSPORT note.
+#   CONTROL_COMMENTS    Exhaustive list of comments `update_control_comment` may
+#                       rewrite, as "owner/repo#commentId" entries separated by
+#                       commas. e.g. "mantoshkumar1/pingstep#5498666442"
+#                       Unset or malformed denies every control-comment write.
+#                       These ids are pinned in configuration precisely so the
+#                       status-slot write does not depend on caller identity.
+#                       Keep the list to the actual status slots — nothing else.
 #   PROJECT_TOKEN       optional, isolated Projects-v2 credential. Never used
 #                       for general GitHub operations.
 #   OAUTH_CLIENT_ID / OAUTH_CLIENT_SECRET   connector handshake only.
