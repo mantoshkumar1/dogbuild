@@ -128,3 +128,63 @@ test("a failing check makes the whole verdict failure", async () => {
   const r = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
   assert.equal(r.overall, "failure");
 });
+
+/**
+ * Regression suite for FINDING 1 of
+ * DB-164-CODEX-GITHUB-CONTROL-TOOLS-IMPLEMENTATION-REVIEW-01: workflow runs
+ * and jobs were retrieved but excluded from the verdict, so a failed
+ * same-SHA workflow could be returned alongside overall: "success".
+ */
+function mixedEvidence({ runConclusion = "success", jobConclusion = "success", checkConclusion = "success", statusState = "success" } = {}) {
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    let body;
+    if (u.includes("/check-runs")) {
+      body = { check_runs: [{ id: 1, name: "ok", status: "completed", conclusion: checkConclusion, head_sha: SHA }] };
+    } else if (u.includes("/actions/runs/") && u.includes("/jobs")) {
+      body = { jobs: [{ id: 9, name: "job", status: "completed", conclusion: jobConclusion, steps: [{ number: 1, name: "step", conclusion: jobConclusion }] }] };
+    } else if (u.includes("/actions/runs")) {
+      body = { workflow_runs: [{ id: 5, name: "wf", status: "completed", conclusion: runConclusion, head_sha: SHA, run_attempt: 1 }] };
+    } else {
+      body = { state: statusState, sha: SHA, statuses: [{ context: "legacy", state: statusState }] };
+    }
+    return { ok: true, status: 200, headers: { get: () => null }, text: async () => JSON.stringify(body) };
+  };
+}
+
+test("a failed same-SHA workflow run cannot be reported as success", async () => {
+  mixedEvidence({ runConclusion: "failure", jobConclusion: "success" });
+  const r = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(r.overall, "failure", "a failed workflow run must dominate passing check-runs and statuses");
+  assert.equal(r.evidence_breakdown.workflow_runs, 1);
+});
+
+test("a failed job cannot be reported as success", async () => {
+  mixedEvidence({ runConclusion: "success", jobConclusion: "failure" });
+  const r = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(r.overall, "failure", "a failed job must dominate passing check-runs and statuses");
+  assert.equal(r.evidence_breakdown.jobs, 1);
+});
+
+test("every retrieved signal is counted as evidence", async () => {
+  mixedEvidence({});
+  const r = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.deepEqual(r.evidence_breakdown, { check_runs: 1, commit_statuses: 1, workflow_runs: 1, jobs: 1 });
+  assert.equal(r.evidence_count, 4, "retrieved-but-uncounted evidence is how a false green happens");
+  assert.equal(r.overall, "success");
+});
+
+test("a pending workflow run holds the verdict at pending", async () => {
+  mixedEvidence({ runConclusion: null });
+  globalThis.fetch = (function (inner) {
+    return async (url) => {
+      const res = await inner(url);
+      if (String(url).includes("/actions/runs") && !String(url).includes("/jobs")) {
+        return { ...res, text: async () => JSON.stringify({ workflow_runs: [{ id: 5, name: "wf", status: "in_progress", conclusion: null, head_sha: SHA, run_attempt: 1 }] }) };
+      }
+      return res;
+    };
+  })(globalThis.fetch);
+  const r = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(r.overall, "pending");
+});
