@@ -21,6 +21,31 @@ leaves nothing behind to reap.
 > cause of the process accumulation it replaces. The exception covers this
 > package only and does not relax DogBuild's local-first rules anywhere else.
 
+## Current status: read-only until a trusted identity transport exists
+
+**`CAPABILITY_BLOCKED_ROLE_TRANSPORT`.** Every mutating profile is unreachable
+in the shipped configuration, deliberately.
+
+A role assertion is delivered as a request header. On a transport that does not
+authenticate its caller, that is a **bearer token**: whoever holds it can
+present it, so the `subject` inside it is a claim, not an identity. The current
+Cowork custom-connector path cannot fix that — its OAuth layer is self-issued
+and auto-approving, its access token is a random opaque string bound to no
+principal, and the client controls neither per-task token issuance nor header
+injection. There is therefore no server-verifiable subject on this transport
+today.
+
+Rather than simulate conformance, the Worker fails closed: unless
+`ROLE_TRANSPORT` names a trusted transport, **any presented assertion is
+ignored and the server serves reads only**. Enabling it is a founder decision
+that should follow a real identity path — DogBuild as an OAuth issuer minting
+short-lived per-task tokens, per-task endpoint credentials, or mTLS — not a
+configuration flip.
+
+What *is* enforced once a trusted transport exists: signature, expiry, lifetime
+cap, endpoint binding (`aud`), repository coverage, per-target write scope, and
+producer≠reviewer.
+
 ## Capability profiles
 
 Authority comes from the `profiles` field on each tool. `tools/list` returns
@@ -39,15 +64,19 @@ simultaneous authority.
 
 ## Role enforcement
 
-The role is resolved from the `x-dogbuild-role-assertion` request header only.
-Tool arguments are never consulted, so a caller cannot name or widen its own
-role. The assertion is an HMAC-SHA256 token minted by DogBuild binding role,
-task, repository, optional branch, subject, optional producer, nonce and
-expiry. A reviewer assertion whose `producer` equals its `subject` is rejected:
-a producer cannot hold independent-review authority over its own lineage.
+The role is resolved from the `x-dogbuild-role-assertion` request header only,
+and only when `ROLE_TRANSPORT` names a trusted transport. Tool arguments are
+never consulted, so a caller cannot name or widen its own role. The assertion
+is an HMAC-SHA256 token minted by DogBuild binding role, task, repository,
+optional branch, subject, optional producer, nonce, expiry and `aud` — the
+SHA-256 of the endpoint's path secret, so a token minted for one connector URL
+cannot be replayed against another. A reviewer assertion whose `producer`
+equals its `subject` is rejected: a producer cannot hold independent-review
+authority over its own lineage.
 
-**No assertion means read-only.** An unsigned request gets common reads and
-nothing else. If `ROLE_ASSERTION_KEY` is unset, no role can be granted at all.
+**No assertion means read-only.** So does an untrusted transport, an unset
+`ROLE_ASSERTION_KEY`, a missing or wrong `aud`, an expired token, or a
+signature that does not verify.
 
 ### Write-target scoping
 
@@ -61,6 +90,7 @@ and the check runs **before any upstream request is issued**:
 | `comments: [id, …]` | `update_issue_comment` |
 | `pull_requests: [n, …]` | `update_pull_request`, `publish_review` |
 | `projects: [n, …]` | `add_project_item`, `update_project_item_field` |
+| `project_items: [id, …]` | `update_project_item_field` (exact item) |
 | `branch: "…"` | `create_branch`, `create_or_update_file`, and the `head` of `create_pull_request` |
 | `allow_create_issue: true` | `create_issue` |
 
@@ -70,20 +100,20 @@ governs writes, not visibility.
 
 ### Known limits, stated plainly
 
-- The Worker validates that an assertion is well-formed, unexpired, bound to
-  the requested repository and target, and not self-review. It cannot validate
-  DogBuild's wider lineage predicates — role locks after meaningful lineage
-  start, control generation, duplicate-effect prevention — because it holds no
-  lineage state. Those belong to the DogBuild-side issuer and auto-merger.
+- **Subject identity is not server-verifiable on the current transport.** See
+  the status section above. This is why writes are disabled by default.
+- The Worker cannot validate DogBuild's wider lineage predicates — role locks
+  after meaningful lineage start, control generation, duplicate-effect
+  prevention — because it holds no lineage state. Those belong to the
+  DogBuild-side issuer and auto-merger.
 - Nonces are carried and bound but not yet replay-checked server-side; the
-  replay window is bounded only by the one-hour maximum lifetime.
-- `subject` is bound into the signature but cannot be independently verified
-  server-side: the Worker has no channel-level caller identity. Issuing the
-  right subject is the DogBuild issuer's responsibility.
+  replay window is bounded by the one-hour maximum lifetime and the `aud`
+  endpoint binding.
 - The OAuth layer is ported unchanged from the reference Worker and is *not*
   the access control (`/mcp/<MCP_PATH_SECRET>` is). Strategy accepted it as
   existing state. Real client validation, short-lived access tokens and replay
-  protection remain follow-up work.
+  protection remain follow-up work — and are the same work that would unblock
+  `ROLE_TRANSPORT`.
 
 ## Server invariants
 
@@ -122,8 +152,8 @@ this package removes.
 ## Configuration
 
 See `wrangler.toml.example`. Secrets are set with `wrangler secret put` and
-never committed. `ALLOWED_REPOS` and `ROLE_ASSERTION_KEY` are required for any
-write path to function.
+never committed. `ALLOWED_REPOS`, `ROLE_ASSERTION_KEY` and `ROLE_TRANSPORT` are
+all required before any write path functions.
 
 ## Tests
 
@@ -137,8 +167,10 @@ pagination completeness and truncation, the never-green-by-absence rule, the
 full normalization vocabulary, failed workflow runs and jobs dominating passing
 check-runs, stale-version refusal before any write, comment idempotency, the
 error-class taxonomy, role forgery/expiry/replay/self-review rejection,
-argument-supplied roles being ignored, write-target scope denial with zero
-upstream requests, profile isolation, and static proof that no source file
+endpoint-binding rejection, untrusted-transport downgrade, argument-supplied
+roles being ignored, write-target scope denial with zero upstream requests,
+profile isolation, request-level `tools/list` and `tools/call` behaviour driven
+through the real `fetch` handler, and static proof that no source file
 references a browser or spawns a process.
 
 ## Status
