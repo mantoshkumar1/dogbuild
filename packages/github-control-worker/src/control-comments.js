@@ -23,7 +23,11 @@ export function parseControlComments(env) {
       "CONTROL_COMMENTS is not configured; no control comment may be updated."
     );
   }
-  const entries = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  // Every comma-separated field must be a valid target, including empty ones.
+  // Dropping blanks before validation would silently accept an operator typo
+  // like a trailing or doubled comma and leave the remaining targets live —
+  // the fail-open found in review of PR #166.
+  const entries = raw.split(",").map((s) => s.trim());
   if (!entries.length || !entries.every((e) => ENTRY_RE.test(e))) {
     throw new ControlError(
       ErrorClass.CONTROL_TARGET_DENIED,
