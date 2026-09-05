@@ -1,0 +1,10 @@
+{
+  "name": "@dogbuild/github-control-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-free GitHub control adapter for scheduled DogBuild agents (issue #164).",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

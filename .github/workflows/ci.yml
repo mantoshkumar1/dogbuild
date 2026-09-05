@@ -22,3 +22,22 @@ jobs:
 
       - name: Run test suite
         run: python -m unittest discover -s tests -v
+
+  github-control-worker:
+    name: github-control-worker tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Offline by construction: fetch is mocked, no network, no credentials,
+      # no browser, and no dependencies to install.
+      - name: Run github-control-worker test suite
+        working-directory: packages/github-control-worker
+        run: npm test
