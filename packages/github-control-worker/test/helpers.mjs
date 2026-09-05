@@ -4,6 +4,7 @@ export const ENV = {
   ALLOWED_REPOS: "mantoshkumar1/pingstep,mantoshkumar1/dogbuild",
   ROLE_ASSERTION_KEY: "test-signing-key",
   MCP_PATH_SECRET: "test-path-secret",
+  ROLE_TRANSPORT: "dogbuild-signed-request",
 };
 export const SHA = "a".repeat(40);
 export const OTHER_SHA = "b".repeat(40);
@@ -50,8 +51,9 @@ export function mockFetch(routes = {}, { onUnmatched = "empty" } = {}) {
  * assertion, then resolve it. Tests must never fabricate a ctx by hand —
  * that would bypass exactly the authorization path under test.
  */
-export async function ctxFor(role, scopes = {}, over = {}) {
+export async function ctxFor(role, scopes = {}, over = {}, env = ENV) {
   const { signRoleAssertion, resolveRole } = await import("../src/roles.js");
+  const { sha256Hex } = await import("../src/github.js");
   const now = Date.now();
   const assertion = await signRoleAssertion(ENV.ROLE_ASSERTION_KEY, {
     role,
@@ -60,10 +62,29 @@ export async function ctxFor(role, scopes = {}, over = {}) {
     subject: role === "reviewer" ? "codex" : "claude",
     nonce: "test-nonce",
     exp: now + 600000,
+    aud: await sha256Hex(ENV.MCP_PATH_SECRET),
     ...scopes,
     ...over,
   });
-  return resolveRole(ENV, assertion, now);
+  return resolveRole(env, assertion, now);
+}
+
+/** Mint a raw signed assertion string (for transport-level tests). */
+export async function signedAssertion(role, scopes = {}, over = {}) {
+  const { signRoleAssertion } = await import("../src/roles.js");
+  const { sha256Hex } = await import("../src/github.js");
+  const now = Date.now();
+  return signRoleAssertion(ENV.ROLE_ASSERTION_KEY, {
+    role,
+    task: "DB-164",
+    repo: "mantoshkumar1/pingstep",
+    subject: role === "reviewer" ? "codex" : "claude",
+    nonce: "test-nonce",
+    exp: now + 600000,
+    aud: await sha256Hex(ENV.MCP_PATH_SECRET),
+    ...scopes,
+    ...over,
+  });
 }
 
 export function checkRun(overrides = {}) {
