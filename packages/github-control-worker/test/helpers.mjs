@@ -45,6 +45,27 @@ export function mockFetch(routes = {}, { onUnmatched = "empty" } = {}) {
   return calls;
 }
 
+/**
+ * Build a verified request context the way the Worker does: sign a role
+ * assertion, then resolve it. Tests must never fabricate a ctx by hand —
+ * that would bypass exactly the authorization path under test.
+ */
+export async function ctxFor(role, scopes = {}, over = {}) {
+  const { signRoleAssertion, resolveRole } = await import("../src/roles.js");
+  const now = Date.now();
+  const assertion = await signRoleAssertion(ENV.ROLE_ASSERTION_KEY, {
+    role,
+    task: "DB-164",
+    repo: "mantoshkumar1/pingstep",
+    subject: role === "reviewer" ? "codex" : "claude",
+    nonce: "test-nonce",
+    exp: now + 600000,
+    ...scopes,
+    ...over,
+  });
+  return resolveRole(ENV, assertion, now);
+}
+
 export function checkRun(overrides = {}) {
   return { id: 1, name: "check", status: "completed", conclusion: "success", head_sha: SHA, ...overrides };
 }
