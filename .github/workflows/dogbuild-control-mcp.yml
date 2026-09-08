@@ -1,0 +1,33 @@
+name: DogBuild Control MCP CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/dogbuild-control-mcp/**"
+      - ".github/workflows/dogbuild-control-mcp.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/dogbuild-control-mcp/**"
+      - ".github/workflows/dogbuild-control-mcp.yml"
+
+jobs:
+  test:
+    name: control-mcp tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Dependency-free and offline: fetch is mocked, and no credentials,
+      # browser or local child process is used.
+      - name: Run DogBuild Control MCP tests
+        working-directory: packages/dogbuild-control-mcp
+        run: npm test
