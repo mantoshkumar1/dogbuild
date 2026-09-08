@@ -3,7 +3,7 @@ import { callTool } from "./handlers.js";
 import { TOOLS } from "./tools.js";
 
 export const SERVER_NAME = "dogbuild-control-mcp";
-export const SERVER_VERSION = "0.1.0";
+export const SERVER_VERSION = "0.2.0";
 export const MAX_REQUEST_BYTES = 32_768;
 const PATH_SECRET_RE = /^[A-Za-z0-9._~-]{32,256}$/;
 const ACCESS_TOKEN_RE = /^[A-Za-z0-9._~-]{32,512}$/;
