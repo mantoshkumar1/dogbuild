@@ -1,0 +1,10 @@
+{
+  "name": "@dogbuild/control-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Narrow, read-only MCP control surface owned by DogBuild.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

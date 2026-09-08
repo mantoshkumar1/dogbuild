@@ -1,0 +1,14 @@
+# Example only. Copy to wrangler.toml locally; never commit real values.
+#
+# Configure secrets with Wrangler instead of writing values here:
+#   GITHUB_TOKEN      read-only GitHub credential for the allowed repositories
+#   MCP_PATH_SECRET   unguessable URL-safe path component
+#   MCP_ACCESS_TOKEN  independent bearer token presented by the upstream caller
+
+name = "dogbuild-control-mcp"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+# Fail-closed, comma-separated owner/repository list. Replace before deployment.
+ALLOWED_REPOS = "OWNER/REPOSITORY"
