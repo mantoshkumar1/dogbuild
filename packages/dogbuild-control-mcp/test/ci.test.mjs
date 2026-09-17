@@ -149,7 +149,7 @@ test("check-run pagination includes a later-page failure", async () => {
       }
       return {
         body: { total_count: 2, check_runs: [checkRun()] },
-        headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/check-runs?page=2&per_page=100>; rel="next"` },
+        headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/check-runs?page=2&per_page=100>; rel=\"next\"` },
       };
     },
   });
@@ -168,7 +168,7 @@ test("commit statuses are fully paginated and a later distinct context can fail"
       }
       return {
         body: [commitStatus({ id: 1, context: "build", state: "success" })],
-        headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/statuses?page=2&per_page=100>; rel="next"` },
+        headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/statuses?page=2&per_page=100>; rel=\"next\"` },
       };
     },
   });
@@ -186,7 +186,7 @@ test("only the newest commit status per context contributes", async () => {
       }
       return {
         body: [commitStatus({ id: 2, context: "build", state: "success" })],
-        headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/statuses?page=2&per_page=100>; rel="next"` },
+        headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/statuses?page=2&per_page=100>; rel=\"next\"` },
       };
     },
   });
@@ -223,7 +223,7 @@ test("a never-ending next link reaches the cap and produces INCOMPLETE", async (
     ...ciRoutes(),
     [`GET ${BASE}/commits/${SHA}/check-runs`]: {
       body: { check_runs: [checkRun()] },
-      headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/check-runs?page=99>; rel="next"` },
+      headers: { link: `<https://api.github.com${BASE}/commits/${SHA}/check-runs?page=99>; rel=\"next\"` },
     },
   });
   const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
@@ -236,7 +236,7 @@ test("a pagination link leaving api.github.com fails closed", async () => {
     ...ciRoutes(),
     [`GET ${BASE}/commits/${SHA}/check-runs`]: {
       body: { total_count: 2, check_runs: [checkRun()] },
-      headers: { link: `<https://attacker.example/steal>; rel="next"` },
+      headers: { link: `<https://attacker.example/steal>; rel=\"next\"` },
     },
   });
   await assert.rejects(
@@ -250,7 +250,7 @@ test("a pagination link changing collection path fails closed", async () => {
     ...ciRoutes(),
     [`GET ${BASE}/commits/${SHA}/check-runs`]: {
       body: { total_count: 2, check_runs: [checkRun()] },
-      headers: { link: `<https://api.github.com${BASE}/issues?page=2>; rel="next"` },
+      headers: { link: `<https://api.github.com${BASE}/issues?page=2>; rel=\"next\"` },
     },
   });
   await assert.rejects(
@@ -282,7 +282,7 @@ test("job pagination contributes later-page failures", async () => {
       }
       return {
         body: { total_count: 2, jobs: [job()] },
-        headers: { link: `<https://api.github.com${BASE}/actions/runs/1/jobs?page=2&per_page=100>; rel="next"` },
+        headers: { link: `<https://api.github.com${BASE}/actions/runs/1/jobs?page=2&per_page=100>; rel=\"next\"` },
       };
     },
   });
@@ -398,4 +398,172 @@ test("missing GitHub credentials fail before a network request", async () => {
     (error) => error.class === ErrorClass.CONFIG_INVALID
   );
   assert.equal(calls.length, 0);
+});
+
+// ============================================================================
+// REGRESSION TESTS for issue #175: Push event enumeration and event-neutral
+// exact-SHA CI reconciliation for staging deployment evidence
+// ============================================================================
+
+test("push-triggered workflow runs are enumerated without event filtering", async () => {
+  mockFetch(ciRoutes({ runs: [workflowRun({ event: "push" })] }));
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.SUCCESS);
+  assert.deepEqual(value.workflow_runs[0].event, "push");
+});
+
+test("push-triggered workflow run failure is correctly aggregated", async () => {
+  mockFetch(ciRoutes({ runs: [workflowRun({ event: "push", conclusion: "failure" })] }));
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.FAILURE);
+});
+
+test("push-triggered workflow run pending state is correctly aggregated", async () => {
+  mockFetch(ciRoutes({ runs: [workflowRun({ event: "push", status: "in_progress", conclusion: null })] }));
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.PENDING);
+});
+
+test("mixed pull_request and push workflow runs are both evaluated", async () => {
+  mockFetch({
+    ...ciRoutes({
+      runs: [
+        workflowRun({ id: 1, event: "pull_request", name: "pr-ci" }),
+        workflowRun({ id: 2, event: "push", name: "push-ci" }),
+      ],
+    }),
+    [`GET ${BASE}/actions/runs/1/jobs`]: { body: { total_count: 0, jobs: [] } },
+    [`GET ${BASE}/actions/runs/2/jobs`]: { body: { total_count: 0, jobs: [] } },
+  });
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.SUCCESS);
+  assert.equal(value.evidence_breakdown.workflow_runs, 2);
+  const events = new Set(value.workflow_runs.map((r) => r.event));
+  assert.deepEqual(events, new Set(["pull_request", "push"]));
+});
+
+test("failing push run prevents success when pull_request run passes", async () => {
+  mockFetch({
+    ...ciRoutes({
+      runs: [
+        workflowRun({ id: 1, event: "pull_request", conclusion: "success" }),
+        workflowRun({ id: 2, event: "push", conclusion: "failure" }),
+      ],
+    }),
+    [`GET ${BASE}/actions/runs/1/jobs`]: { body: { total_count: 0, jobs: [] } },
+    [`GET ${BASE}/actions/runs/2/jobs`]: { body: { total_count: 0, jobs: [] } },
+  });
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.FAILURE);
+});
+
+test("pending push run prevents success when pull_request run passes", async () => {
+  mockFetch({
+    ...ciRoutes({
+      runs: [
+        workflowRun({ id: 1, event: "pull_request", conclusion: "success" }),
+        workflowRun({ id: 2, event: "push", status: "in_progress", conclusion: null }),
+      ],
+    }),
+    [`GET ${BASE}/actions/runs/1/jobs`]: { body: { total_count: 0, jobs: [] } },
+    [`GET ${BASE}/actions/runs/2/jobs`]: { body: { total_count: 0, jobs: [] } },
+  });
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.PENDING);
+});
+
+test("workflow runs with multiple attempts are all included in aggregation", async () => {
+  mockFetch({
+    ...ciRoutes({
+      runs: [
+        workflowRun({ id: 1, event: "push", name: "deploy", run_attempt: 1, conclusion: "failure" }),
+        workflowRun({ id: 2, event: "push", name: "deploy", run_attempt: 2, conclusion: "success" }),
+      ],
+    }),
+    [`GET ${BASE}/actions/runs/1/jobs`]: { body: { total_count: 0, jobs: [] } },
+    [`GET ${BASE}/actions/runs/2/jobs`]: { body: { total_count: 0, jobs: [] } },
+  });
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  // Conservative: failure blocks success
+  assert.equal(value.overall, CiResult.FAILURE);
+  assert.equal(value.evidence_breakdown.workflow_runs, 2);
+});
+
+test("workflow runs pagination correctly includes push runs from later pages", async () => {
+  mockFetch({
+    ...ciRoutes(),
+    [`GET ${BASE}/actions/runs`]: ({ parsed }) => {
+      if (parsed.searchParams.get("page") === "2") {
+        return { body: { total_count: 2, workflow_runs: [workflowRun({ id: 2, event: "push", conclusion: "failure" })] } };
+      }
+      return {
+        body: { total_count: 2, workflow_runs: [workflowRun({ id: 1, event: "pull_request" })] },
+        headers: { link: `<https://api.github.com${BASE}/actions/runs?page=2&per_page=100>; rel=\"next\"` },
+      };
+    },
+    [`GET ${BASE}/actions/runs/1/jobs`]: { body: { total_count: 0, jobs: [] } },
+    [`GET ${BASE}/actions/runs/2/jobs`]: { body: { total_count: 0, jobs: [] } },
+  });
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.FAILURE);
+  assert.equal(value.sources.workflow_runs.pages, 2);
+});
+
+test("push-run job pagination correctly includes failures from later pages", async () => {
+  mockFetch({
+    ...ciRoutes({
+      runs: [workflowRun({ event: "push" })],
+    }),
+    [`GET ${BASE}/actions/runs/1/jobs`]: ({ parsed }) => {
+      if (parsed.searchParams.get("page") === "2") {
+        return { body: { total_count: 2, jobs: [job({ id: 12, conclusion: "failure" })] } };
+      }
+      return {
+        body: { total_count: 2, jobs: [job({ id: 11 })] },
+        headers: { link: `<https://api.github.com${BASE}/actions/runs/1/jobs?page=2&per_page=100>; rel=\"next\"` },
+      };
+    },
+  });
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.FAILURE);
+  assert.equal(value.sources.jobs.pages, 2);
+});
+
+test("mixed event workflow runs fail validation if any SHA mismatches", async () => {
+  mockFetch(ciRoutes({
+    runs: [
+      workflowRun({ id: 1, event: "push", head_sha: OTHER_SHA }),
+      workflowRun({ id: 2, event: "pull_request" }),
+    ],
+  }));
+  await assert.rejects(
+    getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA }),
+    (error) => error.class === ErrorClass.HEAD_MISMATCH
+  );
+});
+
+test("push-only workflow runs produce correct aggregate without pull_request runs present", async () => {
+  mockFetch(ciRoutes({
+    runs: [
+      workflowRun({ event: "push", conclusion: "success" }),
+      workflowRun({ event: "push", conclusion: "success" }),
+    ],
+  }));
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.SUCCESS);
+  assert.equal(value.evidence_breakdown.workflow_runs, 2);
+  assert(value.workflow_runs.every((r) => r.event === "push"));
+});
+
+test("pull_request-only runs produce expected result without push events", async () => {
+  mockFetch(ciRoutes({
+    runs: [
+      workflowRun({ event: "pull_request", conclusion: "success" }),
+      workflowRun({ event: "pull_request", conclusion: "success" }),
+    ],
+  }));
+  const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
+  assert.equal(value.overall, CiResult.SUCCESS);
+  assert.equal(value.evidence_breakdown.workflow_runs, 2);
+  assert(value.workflow_runs.every((r) => r.event === "pull_request"));
 });
