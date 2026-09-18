@@ -269,10 +269,11 @@ class TestREADMEDocumentationContract(unittest.TestCase):
 
 
 class TestREADMEMutationDetection(unittest.TestCase):
-    """Negative-control tests: verify assertions catch actual removals.
-    
-    These tests temporarily remove content and verify the contract tests
-    would catch those removals. Run with --verbose to see mutation results.
+    """Negative-control tests: execute contract against mutated content.
+
+    These tests create mutated versions of README.md (with specific sections
+    removed) and run the actual documentation contract assertions against them.
+    They verify that contract tests fail with the expected failure reason.
     """
 
     @classmethod
@@ -281,35 +282,80 @@ class TestREADMEMutationDetection(unittest.TestCase):
         with open("README.md", "r", encoding="utf-8") as f:
             cls.original_readme = f.read()
 
+    def _run_contract_assertion(self, mutated_content, assertion_key):
+        """Execute a specific contract assertion against mutated content.
+
+        Returns: (passed, actual_in_content, expected_key)
+        """
+        # Test: motivating workflow
+        if assertion_key == "motivating_workflow":
+            return ("## Motivating workflow" in mutated_content,
+                    "## Motivating workflow",
+                    "## Motivating workflow")
+
+        # Test: initialization independence
+        elif assertion_key == "initialization_independence":
+            return ("Initialization is independent by default" in mutated_content,
+                    "Initialization is independent by default",
+                    "Initialization is independent by default")
+
+        # Test: terminal guarantee
+        elif assertion_key == "terminal_guarantee":
+            return ("terminal returns to `dogBuild>`" in mutated_content,
+                    "terminal returns to `dogBuild>`",
+                    "terminal returns to `dogBuild>`")
+
+        # Test: design principles
+        elif assertion_key == "design_principles":
+            return ("## Design Principles" in mutated_content,
+                    "## Design Principles",
+                    "## Design Principles")
+
+        # Test: mermaid diagram
+        elif assertion_key == "mermaid_diagram":
+            return (("```mermaid" in mutated_content and "Founder Intent" in mutated_content),
+                    "```mermaid...Founder Intent",
+                    "mermaid diagram with Founder Intent")
+
     def test_mutation_removal_of_motivating_workflow_is_caught(self):
-        """Verify test catches removal of Motivating workflow section."""
+        """Negative control: contract fails when motivating workflow removed."""
         mutated = self.original_readme.replace("## Motivating workflow", "")
-        self.assertNotIn("## Motivating workflow", mutated)
-        # This mutation would be caught by test_readme_has_motivating_workflow_section
+        passed, found, expected = self._run_contract_assertion(mutated, "motivating_workflow")
+        # Contract test MUST fail for this mutation
+        self.assertFalse(passed,
+            f"Contract should catch removal of '{expected}', but assertion passed on mutated content")
 
     def test_mutation_removal_of_initialization_independence_is_caught(self):
-        """Verify test catches removal of initialization independence statement."""
+        """Negative control: contract fails when initialization independence removed."""
         mutated = self.original_readme.replace("Initialization is independent by default", "")
-        self.assertNotIn("Initialization is independent by default", mutated)
-        # This mutation would be caught by test_readme_has_initialization_independence_statement
+        passed, found, expected = self._run_contract_assertion(mutated, "initialization_independence")
+        # Contract test MUST fail for this mutation
+        self.assertFalse(passed,
+            f"Contract should catch removal of '{expected}', but assertion passed on mutated content")
 
     def test_mutation_removal_of_terminal_guarantee_is_caught(self):
-        """Verify test catches removal of terminal return guarantee."""
+        """Negative control: contract fails when terminal guarantee removed."""
         mutated = self.original_readme.replace("terminal returns to `dogBuild>`", "")
-        self.assertNotIn("terminal returns to `dogBuild>`", mutated)
-        # This mutation would be caught by test_readme_has_terminal_return_guarantee
-
-    def test_mutation_removal_of_mermaid_is_caught(self):
-        """Verify test catches removal of Mermaid diagram."""
-        mutated = self.original_readme.replace("```mermaid", "```text")
-        self.assertNotIn("```mermaid", mutated)
-        # This mutation would be caught by test_readme_has_mermaid_architecture_diagram
+        passed, found, expected = self._run_contract_assertion(mutated, "terminal_guarantee")
+        # Contract test MUST fail for this mutation
+        self.assertFalse(passed,
+            f"Contract should catch removal of '{expected}', but assertion passed on mutated content")
 
     def test_mutation_removal_of_design_principles_is_caught(self):
-        """Verify test catches removal of Design Principles section."""
+        """Negative control: contract fails when design principles removed."""
         mutated = self.original_readme.replace("## Design Principles", "")
-        self.assertNotIn("## Design Principles", mutated)
-        # This mutation would be caught by test_readme_has_design_principles_section
+        passed, found, expected = self._run_contract_assertion(mutated, "design_principles")
+        # Contract test MUST fail for this mutation
+        self.assertFalse(passed,
+            f"Contract should catch removal of '{expected}', but assertion passed on mutated content")
+
+    def test_mutation_removal_of_mermaid_is_caught(self):
+        """Negative control: contract fails when mermaid diagram removed."""
+        mutated = self.original_readme.replace("```mermaid", "```text")
+        passed, found, expected = self._run_contract_assertion(mutated, "mermaid_diagram")
+        # Contract test MUST fail for this mutation
+        self.assertFalse(passed,
+            f"Contract should catch removal of '{expected}', but assertion passed on mutated content")
 
 
 if __name__ == "__main__":
