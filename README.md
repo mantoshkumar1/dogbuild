@@ -2,7 +2,17 @@
 
 [![CI](https://github.com/mantoshkumar1/dogbuild/actions/workflows/ci.yml/badge.svg)](https://github.com/mantoshkumar1/dogbuild/actions/workflows/ci.yml)
 
+A local, file-based **project interface and authority layer** between coding agents (Claude Code, Cursor, Codex) with **ChatGPT** as the delegated reviewer and the **human owner** in ultimate authority. It keeps every agent operating from **one verified project state**, routes routine decisions through a deterministic authority gate, and interrupts the human only on real exceptions.
+
 An experimental **deterministic control and orchestration layer** for coordinating multiple AI coding agents through GitHub and curated MCP interfaces, without requiring a human to manually relay context between them.
+
+> Your coding agents coordinate through a verified state ledger instead of hidden conversations. You step in only when a decision genuinely needs you.
+
+---
+
+## Motivating workflow
+
+DogBuild grew out of coordination friction the founder hit while building [PingStep](https://pingstep.dev/): implementation done by one coding agent, review done separately by another, with the human manually carrying the implementation result to the reviewer and the review findings back — every round of fixes. PingStep is a motivating example, not a DogBuild dependency or customer; day-to-day dogfooding currently runs against PhotoSahi and DogBuild itself (see Quickstart below). That manual transport is still how the alpha works — DogBuild does not yet automate it (see "What is actually running" below). Full account: [`vision.md`](vision.md).
 
 ## The Problem
 
@@ -16,7 +26,14 @@ AI agents can implement and review work. Without a durable control plane, the hu
 
 ---
 
-## Current Status (September 2026)
+## Status
+
+- **Phase:** two-week MVP (founder tool / dogfood).
+- **Framing:** built because the founder already needs it. Selling it is a **hypothesis to test later** — payment, demand, pricing, and distribution are **explicitly unvalidated** (see [`docs/commercial-assumptions.md`](docs/commercial-assumptions.md)).
+- DogBuild's product activation and commercial constraints originated in the private Revenue Opportunity Lab. DogBuild owns its implementation and runtime truth. See [`docs/governance-boundaries.md`](docs/governance-boundaries.md) and the versioned [`docs/product-governance-source.md`](docs/product-governance-source.md) snapshot.
+- **Tests run in CI, not just locally.** Every push and pull request against `main` runs the full suite (`python -m unittest discover -s tests`) on Python 3.9 and 3.11 — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Merge authority itself is still human-only regardless of CI result; see [`docs/authority-model.md`](docs/authority-model.md).
+
+### Current Status (September 2026)
 
 **DogBuild is under active development and is not yet a production-ready autonomous-agent platform.**
 
@@ -50,8 +67,7 @@ dogbuild start
 
 ### Share a short status
 
-Write a small report to any folder you choose. This is useful when you keep a
-separate, shared status area for your projects.
+Write a small report to any folder you choose. This is useful when you keep a separate, shared status area for your projects.
 
 ```bash
 dogbuild report . --output-dir /path/to/reports/dogbuild \
@@ -61,24 +77,15 @@ dogbuild report . --output-dir /path/to/reports/dogbuild \
   --next "Open the pull request"
 ```
 
-Each answer must be one short line. DogBuild does not copy project files,
-source code, or command output into the report, and it refuses obvious secret
-values. Pick the output folder yourself; DogBuild never hard-codes one.
+Each answer must be one short line. DogBuild does not copy project files, source code, or command output into the report, and it refuses obvious secret values. Pick the output folder yourself; DogBuild never hard-codes one.
 
 ### What is actually running
 
-- **DogBuild is the visible interface.** You talk to DogBuild, not to a
-  coding agent.
-- **Claude Code is the current execution runtime.** It runs underneath, one
-  turn per message. It can be replaced without losing the project.
-- **ChatGPT is the master reviewer.** DogBuild does **not** talk to ChatGPT
-  automatically — transport is manual in this alpha. When a reviewer decision
-  is required DogBuild pauses and tells you so; it never pretends to have sent
-  anything.
-- **Persistent truth lives in the repository's `.ai/` state**, not in the
-  Claude session. Sessions are disposable; the project is not.
-- **The human is the final authority.** Anything needing a human decision
-  blocks dispatch.
+- **DogBuild is the visible interface.** You talk to DogBuild, not to a coding agent.
+- **Claude Code is the current execution runtime.** It runs underneath, one turn per message. It can be replaced without losing the project.
+- **ChatGPT is the master reviewer.** DogBuild does **not** talk to ChatGPT automatically — transport is manual in this alpha. When a reviewer decision is required DogBuild pauses and tells you so; it never pretends to have sent anything.
+- **Persistent truth lives in the repository's `.ai/` state**, not in the Claude session. Sessions are disposable; the project is not.
+- **The human is the final authority.** Anything needing a human decision blocks dispatch.
 
 You land on the DogBuild prompt:
 
@@ -94,8 +101,7 @@ DogBuild
 dogBuild>
 ```
 
-`dogBuild>` is the project interface. Ask **"What's happening?"** at any time,
-or type `help` for the built-in commands.
+`dogBuild>` is the project interface. Ask **"What's happening?"** at any time, or type `help` for the built-in commands. After every completed response the terminal returns to `dogBuild>`.
 
 ### Start options
 
@@ -109,6 +115,8 @@ dogbuild start --permission-mode acceptEdits
 ```
 
 `statekeeper …`, `psk …`, and `dogbuild …` remain interchangeable.
+
+Initialization is independent by default. An upstream product or governance record is optional and must be supplied explicitly with `--source-name` and `--source-record`; DogBuild never injects the founder's private Lab into another user's repository.
 
 ### Built-in commands
 
@@ -126,6 +134,8 @@ Answered from local state — no Claude call, no tokens spent:
 | `mode` | runtime, permission mode, session |
 | `clear` | clear the screen |
 | `exit` / `quit` | leave DogBuild (Ctrl-D also works) |
+
+Plain questions like "What's happening?", "What's next?", "Did the tests pass?" are answered the same way. Anything else is a real instruction and goes to Claude Code.
 
 ---
 
@@ -272,10 +282,7 @@ These incremental steps show progress toward the eventual vision:
 
 ## Scope Discipline (MVP)
 
-Local-only · file-based · **no** OpenAI API · **no** browser automation · **no**
-hosted backend · **no** accounts · **no** payment · **no** dashboard · **no**
-cloud sync. One canonical protocol; thin per-agent adapters (never four
-implementations).
+Local-only · file-based · **no** OpenAI API · **no** browser automation · **no** hosted backend · **no** accounts · **no** payment · **no** dashboard · **no** cloud sync. One canonical protocol; thin per-agent adapters (never four implementations).
 
 ---
 
