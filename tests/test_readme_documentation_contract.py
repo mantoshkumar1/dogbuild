@@ -41,6 +41,8 @@ class DocumentationContract:
         "production_disclaimer": "not yet production-ready",
         "connectivity_inventory_item": "MCP portal connectivity and inventory documentation",
         "enforcement_identity_item": "Curation enforcement and least-privilege access control",
+        "completed_mcp_portal_item": "- [x] MCP portal connectivity and inventory documentation",
+        "pending_enforcement_item": "- [ ] Curation enforcement and least-privilege access control (#169, #167)",
         "issue_169_reference": "#169",
         "issue_167_reference": "#167",
     }
@@ -323,6 +325,31 @@ class TestREADMEDocumentationContract(unittest.TestCase):
         is_valid, failures = self.contract.validate(mutated)
         self.assertFalse(is_valid,
             "Contract should fail for removed #167 reference")
+
+    def test_false_check_of_pending_enforcement_item_is_caught(self):
+        """Negative control: contract fails when pending enforcement item is falsely marked complete."""
+        # Mutate pending item from [ ] to [x] (false completion claim)
+        mutated = self.pristine_readme.replace(
+            "- [ ] Curation enforcement and least-privilege access control (#169, #167)",
+            "- [x] Curation enforcement and least-privilege access control (#169, #167)")
+
+        # Verify mutation occurred
+        self.assertNotIn("- [ ] Curation enforcement and least-privilege access control", mutated,
+            "Mutation should change pending item from [ ] to [x]")
+        self.assertIn("- [x] Curation enforcement and least-privilege access control", mutated,
+            "Mutation should result in checked item")
+
+        # Validate that contract fails with the false claim
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for falsely-checked enforcement item")
+        self.assertTrue(any("pending_enforcement_item" in f for f in failures),
+            f"Failure should mention pending_enforcement_item. Got: {failures}")
+
+        # Validate that pristine passes
+        is_valid, failures = self.contract.validate(self.pristine_readme)
+        self.assertTrue(is_valid,
+            f"Contract should pass with pristine pending item. Failures: {failures}")
 
     def test_maturity_split_preserves_both_items(self):
         """Positive control: both portal items must be present and distinct."""
