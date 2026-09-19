@@ -137,7 +137,7 @@ export async function getCommitCi(env, { owner, repo, sha }) {
     }
     const page = await ghPaginate(
       env,
-      `${base}/actions/runs/${encodeURIComponent(String(run.id))}/jobs?filter=latest&per_page=100`,
+      `${base}/actions/runs/${encodeURIComponent(String(run.id))}/jobs?filter=all&per_page=100`,
       { itemsKey: "jobs" }
     );
     jobsPages += page.pages;
