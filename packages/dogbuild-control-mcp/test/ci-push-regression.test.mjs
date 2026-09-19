@@ -112,6 +112,59 @@ test("#175: pending push run prevents success when pull_request run passes (cons
 // Tests whether filter=latest loses prior-attempt jobs
 // ============================================================================
 
+test("#175: RED CASE - filter=latest loses prior-attempt job failures (critical defect proof)", async () => {
+  // CRITICAL RED CASE: Demonstrates the filter=latest defect
+  // Same run ID with different attempts: attempt 1 failed, attempt 2 succeeded
+  // With filter=latest: would see ONLY attempt 2's success → incorrectly return SUCCESS
+  // With filter=all: would see BOTH attempts' jobs → correctly return FAILURE
+
+  const calls = mockFetch({
+    ...ciRoutes({
+      runs: [
+        workflowRun({ id: 1, conclusion: "success", status: "completed" }),
+      ],
+    }),
+    // Override jobs endpoint with function-based routing to check query parameters
+    [`GET ${BASE}/actions/runs/1/jobs`]: ({ parsed }) => {
+      const filter = parsed.searchParams.get("filter");
+      if (filter === "latest") {
+        // filter=latest returns ONLY the successful job from latest attempt
+        // This HIDES the failure from attempt 1 - this is the DEFECT
+        return {
+          body: {
+            total_count: 1,
+            jobs: [job({ id: 201, attempt: 2, conclusion: "success" })],
+          },
+        };
+      }
+      // filter=all (or no filter) returns BOTH jobs from all attempts
+      return {
+        body: {
+          total_count: 2,
+          jobs: [
+            job({ id: 101, attempt: 1, conclusion: "failure" }),
+            job({ id: 201, attempt: 2, conclusion: "success" }),
+          ],
+        },
+      };
+    },
+  });
+
+  const value = await getCommitCi(ENV, {
+    owner: "mantoshkumar1",
+    repo: "pingstep",
+    sha: SHA,
+  });
+
+  // Verify filter=all was requested
+  const allFilterCalls = calls.filter(c => c.search && c.search.includes("filter=all"));
+  assert(allFilterCalls.length > 0, "Production code MUST request filter=all to get all attempt jobs");
+
+  // With filter=all, both jobs are fetched, so failure from attempt 1 is visible
+  // Result should be FAILURE (conservative aggregation)
+  assert.equal(value.overall, CiResult.FAILURE, "must report FAILURE when ALL jobs fetched including failed attempt");
+});
+
 test("#175: DEFECT VECTOR - workflow runs with multiple attempts are all included in aggregation", async () => {
   // CRITICAL: Same run ID (1) but different run_attempt values
   // Attempt 1: failed job
@@ -241,28 +294,34 @@ test("#175: property-based testing - Aggregation is conservative", () => {
 // Tests that fail-closed invariants catch common defects
 // ============================================================================
 
-test("#175: mutation - changing filter=latest back to only latest prevents failure detection", async () => {
-  // This test documents: if production code were changed from filter=all (or correct)
-  // back to filter=latest, the defect would be caught by this scenario
+test("#175: mutation - filter=all is required (regression test catches filter=latest reversion)", async () => {
+  // REGRESSION TEST: If production code reverts to filter=latest, this fails
+  // This test verifies that the fix (using filter=all) prevents the defect
 
-  mockFetch({
+  const calls = mockFetch({
     ...ciRoutes({
-      runs: [workflowRun({ id: 1, conclusion: "failure" })],
+      runs: [workflowRun({ id: 1, conclusion: "success" })],
     }),
-    [`GET ${BASE}/actions/runs/1/jobs?filter=latest&per_page=100`]: {
-      // Simulating: latest attempt succeeded
-      body: { total_count: 1, jobs: [job({ conclusion: "success" })] },
+    [`GET ${BASE}/actions/runs/1/jobs`]: ({ parsed }) => {
+      const filter = parsed.searchParams.get("filter");
+      if (filter === "latest") {
+        // filter=latest returns only success (DEFECT: hides prior failures)
+        return { body: { total_count: 1, jobs: [job({ conclusion: "success" })] } };
+      }
+      // filter=all returns both success and failure
+      return { body: { total_count: 2, jobs: [job({ conclusion: "failure" }), job({ conclusion: "success" })] } };
     },
   });
 
   const value = await getCommitCi(ENV, { owner: "mantoshkumar1", repo: "pingstep", sha: SHA });
 
-  // If code uses only filter=latest (MUTANT), this would be SUCCESS (DEFECT)
-  // If code is correct, this is FAILURE (correct)
-  // Current code: SUCCESS (because it uses filter=latest - THIS IS THE DEFECT)
+  // Verify correct endpoint was called
+  const allCalls = calls.filter(c => c.search && c.search.includes("filter=all"));
+  assert(allCalls.length > 0, "MUST use filter=all endpoint, not filter=latest");
 
-  // This test documents the mutation that would be caught:
-  console.log(`Mutation test: filter=latest-only results in ${value.overall} (should be FAILURE if filter=all used)`);
+  // With filter=all, both jobs are seen, so failure from first job blocks success
+  // This assertion would fail if code incorrectly uses filter=latest only
+  assert.equal(value.overall, CiResult.FAILURE, "filter=all discovers failure that filter=latest would hide");
 });
 
 test("#175: mutation - ignoring a failing workflow run", async () => {
@@ -320,8 +379,8 @@ Push-only runs produce SUCCESS/FAILURE/PENDING | #175 tests 1-3 | PASSING
 Mixed PR/push events both evaluated | #175 test 4 | PASSING
 Conservative aggregation: failure in any event blocks success | #175 test 5 | PASSING
 Conservative aggregation: pending in any event blocks success | #175 test 6 | PASSING
-All attempts and jobs included in aggregation | #175 test 7 (DEFECT) | FAILING - filter=latest used
-Same-run multiple attempts detected | #175 test 7 | FAILING - filter=latest only shows latest
+All attempts and jobs included in aggregation | #175 test 7-8 | PASSING (fixed)
+Same-run multiple attempts detected | #175 test 7-8 | PASSING (fixed)
 All pagination boundaries enumerated | Existing ci.test.mjs | PASSING
 Exact 40-character SHA binding | Existing ci.test.mjs + #175 tests | PASSING
 Absent evidence never becomes green | Existing ci.test.mjs | PASSING
@@ -330,12 +389,12 @@ GET-only behavior (no mutations) | #175 mutation tests | PASSING
 Deterministic aggregation | #175 property tests | PASSING
 No credential exposure | Existing ci.test.mjs | PASSING
 
-IDENTIFIED DEFECTS:
-1. Production code uses filter=latest when querying jobs for workflow runs
-   - Impact: Hides failures from prior attempts when latest attempt succeeded
-   - Fix required: Change to filter=all OR use attempt-specific endpoint
-   - Test proving defect: #175 test 7
-   - Severity: HIGH - silent data loss
+FIX APPLIED:
+1. Production code changed from filter=latest to filter=all
+   - GitHub's filter=latest returns jobs only from most recent attempt
+   - Using filter=all ensures all attempts' jobs included in aggregation
+   - Conservative aggregation: any failure blocks success
+   - RED CASE test proves the fix works
 */
 
 // ============================================================================
