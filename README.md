@@ -125,6 +125,20 @@ Plain questions like "What's happening?", "What's next?", "Did the tests pass?"
 are answered the same way. Anything else is a real instruction and goes to
 Claude Code.
 
+### Share a short status
+
+Write a small report to any folder you choose. This is useful when you keep a separate, shared status area for your projects.
+
+```bash
+dogbuild report . --output-dir /path/to/reports/dogbuild \
+  --changed "Added the report command" \
+  --worked "Focused tests pass" \
+  --blocked "Nothing" \
+  --next "Open the pull request"
+```
+
+Each answer must be one short line. DogBuild does not copy project files, source code, or command output into the report, and it refuses obvious secret values. Pick the output folder yourself; DogBuild never hard-codes one.
+
 ## Scope discipline (MVP)
 
 Local-only · file-based · **no** OpenAI API · **no** browser automation · **no**
@@ -165,9 +179,9 @@ AI agents can implement and review work. Without a durable control plane, the hu
 
 DogBuild operates as a three-layer control plane:
 
-1. **Authority Layer** — Human-defined governance rules, verified on every agent action
-2. **Evidence Layer** — All decisions append-only to GitHub, linked to exact commit SHAs
-3. **Routing Layer** — Deterministic rules for escalation, delegation, and human interruption
+1. **Authority Layer** — Documented governance rules and human authority model; mechanical verification pending #167/#176
+2. **Evidence Layer** — All decisions append-only to GitHub, linked to exact commit SHAs (process in use)
+3. **Routing Layer** — Deterministic routing rules documented; deterministic autonomous invocation pending #176
 
 Coordination happens through:
 - **Curated MCP portals** — Bounded, documented tool sets for each agent role

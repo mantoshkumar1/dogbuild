@@ -21,6 +21,7 @@ class DocumentationContract:
         "motivating_workflow": "## Motivating workflow",
         "status_section": "## Status",
         "quickstart_section": "## Quickstart",
+        "share_short_status_section": "### Share a short status",
         "component_status_legend": "Component Status Legend",
     }
 
@@ -28,6 +29,9 @@ class DocumentationContract:
         "pingstep_reference": "PingStep",
         "initialization_independence": "Initialization is independent by default",
         "terminal_guarantee": "terminal returns to `dogBuild>`",
+        "report_command_example": "dogbuild report . --output-dir",
+        "report_safety_boundary": "DogBuild does not copy project files, source code, or command output",
+        "report_output_choice": "Pick the output folder yourself",
         "documented_label": "DOCUMENTED",
         "process_in_use_label": "PROCESS_IN_USE",
         "design_reviewed_label": "DESIGN_REVIEWED",
@@ -209,6 +213,74 @@ class TestREADMEDocumentationContract(unittest.TestCase):
         is_valid, failures = self.contract.validate(restored)
         self.assertTrue(is_valid,
             f"Contract should pass after restoring authority model link. Failures: {failures}")
+
+    def test_mutation_removal_of_share_short_status_section_is_caught(self):
+        """Negative control: contract fails when 'Share a short status' section removed."""
+        mutated = self.pristine_readme.replace("### Share a short status", "")
+        self.assertNotIn("### Share a short status", mutated,
+            "Mutation should remove 'Share a short status' section")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed 'Share a short status' section")
+        self.assertTrue(any("share_short_status_section" in f for f in failures),
+            f"Failure should mention share_short_status_section. Got: {failures}")
+
+        restored = self.pristine_readme
+        is_valid, failures = self.contract.validate(restored)
+        self.assertTrue(is_valid,
+            f"Contract should pass after restoring 'Share a short status' section. Failures: {failures}")
+
+    def test_mutation_removal_of_report_command_example_is_caught(self):
+        """Negative control: contract fails when report command example removed."""
+        mutated = self.pristine_readme.replace("dogbuild report . --output-dir", "")
+        self.assertNotIn("dogbuild report . --output-dir", mutated,
+            "Mutation should remove report command example")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed report command example")
+        self.assertTrue(any("report_command_example" in f for f in failures),
+            f"Failure should mention report_command_example. Got: {failures}")
+
+        restored = self.pristine_readme
+        is_valid, failures = self.contract.validate(restored)
+        self.assertTrue(is_valid,
+            f"Contract should pass after restoring report command example. Failures: {failures}")
+
+    def test_mutation_removal_of_report_safety_boundary_is_caught(self):
+        """Negative control: contract fails when report safety boundary removed."""
+        mutated = self.pristine_readme.replace("DogBuild does not copy project files, source code, or command output", "")
+        self.assertNotIn("DogBuild does not copy project files, source code, or command output", mutated,
+            "Mutation should remove report safety boundary")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed report safety boundary")
+        self.assertTrue(any("report_safety_boundary" in f for f in failures),
+            f"Failure should mention report_safety_boundary. Got: {failures}")
+
+        restored = self.pristine_readme
+        is_valid, failures = self.contract.validate(restored)
+        self.assertTrue(is_valid,
+            f"Contract should pass after restoring report safety boundary. Failures: {failures}")
+
+    def test_mutation_removal_of_report_output_choice_is_caught(self):
+        """Negative control: contract fails when report output-choice statement removed."""
+        mutated = self.pristine_readme.replace("Pick the output folder yourself", "")
+        self.assertNotIn("Pick the output folder yourself", mutated,
+            "Mutation should remove output-choice statement")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed output-choice statement")
+        self.assertTrue(any("report_output_choice" in f for f in failures),
+            f"Failure should mention report_output_choice. Got: {failures}")
+
+        restored = self.pristine_readme
+        is_valid, failures = self.contract.validate(restored)
+        self.assertTrue(is_valid,
+            f"Contract should pass after restoring output-choice statement. Failures: {failures}")
 
 
 if __name__ == "__main__":
