@@ -48,10 +48,13 @@ test("initialize advertises the dedicated server", async () => {
   assert.deepEqual(body.result.capabilities, { tools: {} });
 });
 
-test("tools/list returns exactly get_commit_ci", async () => {
+test("tools/list returns exactly the two reviewed tools", async () => {
   const response = await rpc("tools/list", {});
   const body = await response.json();
-  assert.deepEqual(body.result.tools.map((tool) => tool.name), ["get_commit_ci"]);
+  assert.deepEqual(
+    body.result.tools.map((tool) => tool.name),
+    ["get_commit_ci", "handle_comment_change_request"]
+  );
 });
 
 test("tools/call traverses the real transport and returns an exact-SHA result", async () => {
