@@ -219,7 +219,8 @@ Coordination happens through:
 **Current Wave (MVP / Dogfood)**
 - [x] File-based project state ledger
 - [x] Authority model definition and documentation
-- [x] MCP portal curation and access control
+- [x] MCP portal connectivity and inventory documentation
+- [ ] Curation enforcement and least-privilege access control (#169, #167)
 - [ ] Automated agent-to-agent coordination (requires #183, #185 in progress)
 
 **Next Wave (If Demand Validates)**

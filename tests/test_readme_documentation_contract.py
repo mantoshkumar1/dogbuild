@@ -39,6 +39,10 @@ class DocumentationContract:
         "authority_model_link": "docs/authority-model.md",
         "governance_boundaries_link": "docs/governance-boundaries.md",
         "production_disclaimer": "not yet production-ready",
+        "connectivity_inventory_item": "MCP portal connectivity and inventory documentation",
+        "enforcement_identity_item": "Curation enforcement and least-privilege access control",
+        "issue_169_reference": "#169",
+        "issue_167_reference": "#167",
     }
 
     def validate(self, readme_text):
@@ -81,23 +85,16 @@ class TestREADMEDocumentationContract(unittest.TestCase):
     def test_mutation_removal_of_motivating_workflow_is_caught(self):
         """Negative control: contract fails when motivating workflow removed."""
         mutated = self.pristine_readme.replace("## Motivating workflow", "")
-        # Prove mutation was applied
         self.assertNotIn("## Motivating workflow", mutated,
             "Mutation should remove motivating workflow section")
 
-        # Run shared contract
         is_valid, failures = self.contract.validate(mutated)
-        # Verify expected failure
         self.assertFalse(is_valid,
             "Contract should fail for removed motivating workflow")
         self.assertTrue(any("motivating_workflow" in f for f in failures),
             f"Failure should mention motivating_workflow. Got: {failures}")
 
-        # Restore and verify contract passes
-        restored = mutated.replace("", "## Motivating workflow")
-        # Use original pristine content for accurate restoration
-        # This simulates the operator re-adding the content
-        restored = self.pristine_readme  # Get from pristine source
+        restored = self.pristine_readme
         is_valid, failures = self.contract.validate(restored)
         self.assertTrue(is_valid,
             f"Contract should pass after restoring motivating workflow. Failures: {failures}")
@@ -281,6 +278,59 @@ class TestREADMEDocumentationContract(unittest.TestCase):
         is_valid, failures = self.contract.validate(restored)
         self.assertTrue(is_valid,
             f"Contract should pass after restoring output-choice statement. Failures: {failures}")
+
+    def test_mutation_removal_of_connectivity_inventory_is_caught(self):
+        """Negative control: contract fails when portal connectivity/inventory item removed."""
+        mutated = self.pristine_readme.replace(
+            "- [x] MCP portal connectivity and inventory documentation", "")
+        self.assertNotIn("MCP portal connectivity and inventory documentation", mutated,
+            "Mutation should remove connectivity/inventory item")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed portal connectivity/inventory item")
+        
+        self.assertIn("MCP portal connectivity and inventory documentation", self.pristine_readme,
+            "Pristine should contain connectivity/inventory item")
+
+    def test_mutation_removal_of_enforcement_identity_is_caught(self):
+        """Negative control: contract fails when curation enforcement/identity item removed."""
+        mutated = self.pristine_readme.replace(
+            "- [ ] Curation enforcement and least-privilege access control (#169, #167)", "")
+        self.assertNotIn("Curation enforcement and least-privilege access control", mutated,
+            "Mutation should remove enforcement/identity item")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed curation enforcement/identity item")
+
+    def test_mutation_removal_of_169_reference_is_caught(self):
+        """Negative control: contract fails when #169 reference removed from enforcement item."""
+        mutated = self.pristine_readme.replace("#169", "")
+        self.assertNotIn("#169", mutated,
+            "Mutation should remove #169 reference")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed #169 reference")
+
+    def test_mutation_removal_of_167_reference_is_caught(self):
+        """Negative control: contract fails when #167 reference removed from enforcement item."""
+        mutated = self.pristine_readme.replace("#167", "")
+        self.assertNotIn("#167", mutated,
+            "Mutation should remove #167 reference")
+
+        is_valid, failures = self.contract.validate(mutated)
+        self.assertFalse(is_valid,
+            "Contract should fail for removed #167 reference")
+
+    def test_maturity_split_preserves_both_items(self):
+        """Positive control: both portal items must be present and distinct."""
+        self.assertIn("MCP portal connectivity and inventory documentation", self.pristine_readme,
+            "README must include connectivity/inventory documentation item")
+        self.assertIn("Curation enforcement and least-privilege access control (#169, #167)", 
+            self.pristine_readme,
+            "README must include enforcement/identity item with issue references")
 
 
 if __name__ == "__main__":
