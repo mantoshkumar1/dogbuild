@@ -11,6 +11,33 @@ authority gate, and interrupts the human only on real exceptions.
 > Your coding agents coordinate through a verified state ledger instead of hidden
 > conversations. You step in only when a decision genuinely needs you.
 
+## 30-second overview
+
+DogBuild is an experimental, local control layer for AI-assisted software
+delivery. It tackles a practical problem: when one agent implements, another
+reviews, and each operates in an isolated session, the human becomes the message
+bus and the only keeper of project state.
+
+| Engineering concern | DogBuild's approach |
+|---|---|
+| Context and decisions disappear between agent sessions | Repository-backed project state survives any individual runtime |
+| Agents can act beyond their intended authority | Explicit authority boundaries keep irreversible actions under human control |
+| Review claims can drift from the code being discussed | Evidence records link decisions and reviews to Git revisions; CI runs on every push and pull request |
+| Multi-agent handoffs become ad hoc | Routing and escalation rules are documented and inspectable; automated invocation remains pending |
+
+**What this demonstrates:** Python platform engineering, deterministic control
+around non-deterministic agents, durable state, failure-aware automation,
+CI-backed validation, and least-privilege system design.
+
+**Current maturity:** a working founder-tool alpha under active dogfooding. It is
+local and file-based; ChatGPT transport is still manual, while autonomous
+agent-to-agent coordination and full mechanical enforcement remain in progress.
+
+[Project case study](https://mantoshkumar1.github.io/projects/dogbuild/) ·
+[Technical vision](vision.md) ·
+[Authority model](docs/authority-model.md) ·
+[CI evidence](https://github.com/mantoshkumar1/dogbuild/actions)
+
 ## Motivating workflow
 
 DogBuild grew out of coordination friction the founder hit while building
@@ -163,7 +190,7 @@ publish, delete, spend, external comms, secrets/production, scope changes).
 
 ---
 
-## Public Overview - For Architects & Recruiters
+## Detailed architecture and delivery status
 
 ### The Problem DogBuild Addresses
 
