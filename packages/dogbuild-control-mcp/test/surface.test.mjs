@@ -25,9 +25,11 @@ const LEGACY_AND_FORBIDDEN = [
 ];
 
 test("the V1 catalogue exposes exactly one read-only tool", () => {
-  assert.deepEqual(TOOLS.map((tool) => tool.name), ["get_commit_ci"]);
+  assert.deepEqual(TOOLS.map((tool) => tool.name), ["get_commit_ci", "get_raw_commit"]);
   assert.equal(findTool("get_commit_ci").inputSchema.additionalProperties, false);
   assert.deepEqual(findTool("get_commit_ci").inputSchema.required, ["owner", "repo", "sha"]);
+  assert.equal(findTool("get_raw_commit").inputSchema.additionalProperties, false);
+  assert.deepEqual(findTool("get_raw_commit").inputSchema.required, ["owner", "repo", "sha"]);
 });
 
 test("every legacy, parked, generic, destructive and random name is unreachable", async () => {

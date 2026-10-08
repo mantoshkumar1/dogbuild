@@ -51,7 +51,7 @@ test("initialize advertises the dedicated server", async () => {
 test("tools/list returns exactly get_commit_ci", async () => {
   const response = await rpc("tools/list", {});
   const body = await response.json();
-  assert.deepEqual(body.result.tools.map((tool) => tool.name), ["get_commit_ci"]);
+  assert.deepEqual(body.result.tools.map((tool) => tool.name), ["get_commit_ci", "get_raw_commit"]);
 });
 
 test("tools/call traverses the real transport and returns an exact-SHA result", async () => {

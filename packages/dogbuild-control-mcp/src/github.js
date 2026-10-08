@@ -140,3 +140,170 @@ export function assertExactSha(sha) {
   }
   return sha;
 }
+
+// ---------------------------------------------------------------------------
+// Bounded, read-only GET helper used by get_raw_commit only. Additive: none of
+// the helpers above changes behavior.
+// ---------------------------------------------------------------------------
+export const RAW_MAX_GETS = 3;
+export const RAW_MAX_RESPONSE_BYTES = 2_097_152;
+export const RAW_TOTAL_DEADLINE_MS = 45_000;
+const JSON_CONTENT_TYPE_RE = /^application\/(?:[a-z0-9.+-]*\+)?json\s*(?:;|$)/i;
+
+export function newBoundedSession() {
+  return { startedAt: Date.now(), gets: 0 };
+}
+
+export function assertWithinDeadline(session) {
+  if (Date.now() - session.startedAt >= RAW_TOTAL_DEADLINE_MS) {
+    throw new ControlError(ErrorClass.TIMEOUT, "GitHub request timed out.", { reason: "TOTAL_DEADLINE_EXCEEDED" });
+  }
+}
+
+function cancelQuietly(target) {
+  try {
+    const promise = target && typeof target.cancel === "function" ? target.cancel() : null;
+    if (promise && typeof promise.catch === "function") promise.catch(() => {});
+  } catch {
+    // best effort only
+  }
+}
+
+function concatChunks(chunks, total) {
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
+/**
+ * One GET with manual redirect handling, stream-bounded decoded bytes and a
+ * shared deadline. Resolves to { json } or { incomplete: "RESPONSE_TOO_LARGE" }.
+ * Non-2xx responses are classified by status without reading their body.
+ */
+export async function boundedGet(env, path, session) {
+  const headers = authHeaders(env);
+  const requestUrl = githubUrl(path);
+  assertWithinDeadline(session);
+  session.gets += 1;
+  if (session.gets > RAW_MAX_GETS) {
+    throw new ControlError(ErrorClass.UPSTREAM_ERROR, "Internal error.", { reason: "GET_BUDGET_EXCEEDED" });
+  }
+
+  const remaining = RAW_TOTAL_DEADLINE_MS - (Date.now() - session.startedAt);
+  const useTotal = remaining <= REQUEST_TIMEOUT_MS;
+  const limit = useTotal ? remaining : REQUEST_TIMEOUT_MS;
+  const timeoutError = () => new ControlError(ErrorClass.TIMEOUT, "GitHub request timed out.", {
+    reason: useTotal ? "TOTAL_DEADLINE_EXCEEDED" : "REQUEST_TIMEOUT",
+  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), limit);
+  const aborted = new Promise((_, reject) => {
+    controller.signal.addEventListener("abort", () => reject(timeoutError()), { once: true });
+  });
+  aborted.catch(() => {});
+
+  let reader = null;
+  let finished = false;
+  let response = null;
+  try {
+    try {
+      response = await Promise.race([
+        fetch(requestUrl, { method: "GET", headers, redirect: "manual", signal: controller.signal }),
+        aborted,
+      ]);
+    } catch (error) {
+      if (error instanceof ControlError) throw error;
+      if (error && (error.name === "AbortError" || error.name === "TimeoutError")) throw timeoutError();
+      throw new ControlError(ErrorClass.UPSTREAM_ERROR, "GitHub request failed.");
+    }
+
+    const fail = (errorClass, message, details) => {
+      cancelQuietly(response && response.body);
+      finished = true;
+      throw new ControlError(errorClass, message, details);
+    };
+    const status = response.status;
+    if ((status >= 300 && status < 400) || response.type === "opaqueredirect") {
+      fail(ErrorClass.UPSTREAM_MALFORMED, "GitHub redirected the request.", { reason: "REDIRECT_DENIED" });
+    }
+    if (!(status >= 200 && status < 300)) {
+      fail(classifyHttpStatus(status, response.headers), `GitHub responded ${status}.`, { status });
+    }
+    const hdr = (name) => (response.headers && typeof response.headers.get === "function"
+      ? response.headers.get(name)
+      : null);
+    if (hdr("link")) {
+      fail(ErrorClass.UPSTREAM_MALFORMED, "GitHub returned unexpected pagination.", { reason: "UNEXPECTED_PAGINATION" });
+    }
+    if (typeof response.url === "string" && response.url) {
+      let same = false;
+      try {
+        const got = new URL(response.url);
+        const want = new URL(requestUrl);
+        same = got.origin === want.origin && got.pathname === want.pathname && got.search === want.search;
+      } catch {
+        same = false;
+      }
+      if (!same) {
+        fail(ErrorClass.UPSTREAM_MALFORMED, "GitHub response URL did not match the request.", { reason: "RESPONSE_URL_MISMATCH" });
+      }
+    }
+    const contentType = hdr("content-type");
+    if (typeof contentType !== "string" || !JSON_CONTENT_TYPE_RE.test(contentType)) {
+      fail(ErrorClass.UPSTREAM_MALFORMED, "GitHub returned a non-JSON response.", { reason: "CONTENT_TYPE_NOT_JSON" });
+    }
+    const advertised = Number(hdr("content-length"));
+    if (hdr("content-length") !== null && Number.isFinite(advertised) && advertised > RAW_MAX_RESPONSE_BYTES) {
+      cancelQuietly(response.body);
+      finished = true;
+      return { incomplete: "RESPONSE_TOO_LARGE" };
+    }
+
+    const chunks = [];
+    let total = 0;
+    if (response.body && typeof response.body.getReader === "function") {
+      reader = response.body.getReader();
+      for (;;) {
+        let step;
+        try {
+          step = await Promise.race([reader.read(), aborted]);
+        } catch (error) {
+          if (error instanceof ControlError) throw error;
+          throw new ControlError(ErrorClass.UPSTREAM_ERROR, "GitHub request failed.");
+        }
+        if (step.done) break;
+        const chunk = step.value;
+        total += chunk.byteLength;
+        if (total > RAW_MAX_RESPONSE_BYTES) {
+          cancelQuietly(reader);
+          finished = true;
+          return { incomplete: "RESPONSE_TOO_LARGE" };
+        }
+        chunks.push(chunk);
+      }
+      finished = true;
+    } else {
+      finished = true;
+    }
+
+    let text;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(concatChunks(chunks, total));
+    } catch {
+      throw new ControlError(ErrorClass.UPSTREAM_MALFORMED, "GitHub returned malformed JSON.", { reason: "MALFORMED_JSON" });
+    }
+    try {
+      return { json: JSON.parse(text) };
+    } catch {
+      throw new ControlError(ErrorClass.UPSTREAM_MALFORMED, "GitHub returned malformed JSON.", { reason: "MALFORMED_JSON" });
+    }
+  } finally {
+    if (!finished && reader) cancelQuietly(reader);
+    clearTimeout(timer);
+  }
+}
