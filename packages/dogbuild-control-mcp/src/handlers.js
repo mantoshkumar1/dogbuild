@@ -1,6 +1,7 @@
 import { assertRepoAllowed } from "./allowlist.js";
 import { getCommitCi } from "./ci.js";
 import { ControlError, ErrorClass } from "./errors.js";
+import { getRawCommit } from "./raw-commit.js";
 import { findTool } from "./tools.js";
 
 const INPUT_KEYS = new Set(["owner", "repo", "sha"]);
@@ -21,6 +22,9 @@ export async function callTool(env, name, args = {}) {
   if (!findTool(name)) {
     throw new ControlError(ErrorClass.UNKNOWN_TOOL, `Unknown tool: ${String(name)}`);
   }
+
+  // get_raw_commit owns its fixed, non-reflective argument and allowlist errors.
+  if (name === "get_raw_commit") return getRawCommit(env, args);
 
   assertExactInputShape(args);
   const repository = assertRepoAllowed(env, args.owner, args.repo);
