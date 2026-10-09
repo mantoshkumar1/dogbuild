@@ -24,7 +24,7 @@ const LEGACY_AND_FORBIDDEN = [
   "merge_pull_request", "dispatch_workflow", "rerun_workflow", "get_job_logs",
 ];
 
-test("the V1 catalogue exposes exactly one read-only tool", () => {
+test("the V1 catalogue exposes exactly two read-only tools: get_commit_ci and get_raw_commit", () => {
   assert.deepEqual(TOOLS.map((tool) => tool.name), ["get_commit_ci", "get_raw_commit"]);
   assert.equal(findTool("get_commit_ci").inputSchema.additionalProperties, false);
   assert.deepEqual(findTool("get_commit_ci").inputSchema.required, ["owner", "repo", "sha"]);

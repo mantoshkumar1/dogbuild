@@ -48,7 +48,7 @@ test("initialize advertises the dedicated server", async () => {
   assert.deepEqual(body.result.capabilities, { tools: {} });
 });
 
-test("tools/list returns exactly get_commit_ci", async () => {
+test("tools/list returns exactly get_commit_ci and get_raw_commit", async () => {
   const response = await rpc("tools/list", {});
   const body = await response.json();
   assert.deepEqual(body.result.tools.map((tool) => tool.name), ["get_commit_ci", "get_raw_commit"]);
