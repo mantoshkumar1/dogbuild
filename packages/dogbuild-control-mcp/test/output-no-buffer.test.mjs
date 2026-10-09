@@ -5,7 +5,7 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { generateGitFixture, gitAvailable } from "./raw-support.mjs";
+import { GIT, generateGitFixture, gitAvailable } from "./raw-support.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const NEW_MODULES = ["raw-commit.js", "tree-proof.js", "proof-encoding.js", "output.js"];
@@ -197,7 +197,7 @@ class AbortController {
 const fetchImpl = async function fetch(url, init) {
   const i = init || {};
   const controller = i.signal ? hostControllers.get(i.signal) : null;
-  const host = await acall(bridge.fetch, String(url), i.method === undefined ? "GET" : String(i.method), headersJson(i.headers), i.redirect === undefined ? "follow" : String(i.redirect), controller || null);
+  const host = await acall(bridge.fetch, String(url), i.method === undefined ? null : String(i.method), headersJson(i.headers), i.redirect === undefined ? null : String(i.redirect), controller || null);
   return wrapResponse(host);
 };
 
@@ -321,8 +321,9 @@ const callRaw = (worker, a, id) => worker.fetch(new Request("https://control.exa
   body: JSON.stringify({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "get_raw_commit", arguments: a } }),
 }), ENV);
 const gets = () => JSON.parse(H.gets());
-const transport = async (key, id, mode) => {
+const transport = async (key, id, mode, fault) => {
   H.install(key, mode || "normal");
+  if (fault) H.setFault(JSON.stringify(fault));
   const response = await callRaw(index.default, args(key), id);
   audit("transport response", response);
   const text = await response.text();
@@ -336,12 +337,13 @@ const transport = async (key, id, mode) => {
     error: parsed.error ? { code: parsed.error.code, message: parsed.error.message, reason: parsed.error.data && parsed.error.data.reason, errorClass: parsed.error.data && parsed.error.data.error_class } : null,
     hasResult: parsed.result !== undefined,
     gets: gets(),
+    ledger: JSON.parse(H.ledger()),
   };
 };
 const production = async (key, mode) => {
   H.install(key, mode || "normal");
   const result = await modules["raw-commit.js"].getRawCommit(ENV, args(key));
-  return { result, gets: gets() };
+  return { result, gets: gets(), ledger: JSON.parse(H.ledger()) };
 };
 const attempt = async (fn) => { try { return await fn(); } catch (e) { return { crashed: String(e && e.message) }; } };
 
@@ -356,6 +358,36 @@ const pb = await production("B");
 const summary = (p) => ({ status: p.result.primary.status, complete: p.result.primary.complete, tree: p.result.primary.tree_sha, commit: p.result.primary.sha, parents: p.result.primary.parents.length, gets: p.gets, primaryBytes: jsonUtf8Length(p.result.primary), degradedBytes: jsonUtf8Length(p.result.degraded) });
 report.primaryA = summary(pa);
 report.primaryB = summary(pb);
+report.ledgers = { transportA: report.A && report.A.ledger, transportB: report.B && report.B.ledger, transportBnum: report.Bnum && report.Bnum.ledger, productionA: pa.ledger, productionB: pb.ledger };
+
+// R375 / F-374-1: genuine fault scenarios through the real product path. Each runs the real getRawCommit (or the real
+// transport) against the host router, which records an exact per-request ledger and answers with a faithful response whose
+// observable url is the request url, or with a deliberately wrong url, a hung request, or a redirect.
+const faulty = async (key, fault) => {
+  H.install(key, "normal");
+  H.setFault(JSON.stringify(fault));
+  let outcome;
+  try {
+    const r = await modules["raw-commit.js"].getRawCommit(ENV, args(key));
+    outcome = { returned: true, status: r.primary.status };
+  } catch (e) {
+    outcome = { returned: false, errorClass: e && e.class, reason: e && e.details && e.details.reason };
+  }
+  H.releaseHangs();
+  return { outcome, gets: gets(), ledger: JSON.parse(H.ledger()) };
+};
+report.fidelity = {};
+for (const [name, key, fault] of [
+  ["urlPath1", "A", { kind: "wrongUrl", at: 1, variant: "path" }],
+  ["urlOrigin2", "A", { kind: "wrongUrl", at: 2, variant: "origin" }],
+  ["urlQuery3", "B", { kind: "wrongUrl", at: 3, variant: "query" }],
+  ["urlQuery3A", "A", { kind: "wrongUrl", at: 3, variant: "query" }],
+  ["redirect2", "A", { kind: "redirect", at: 2 }],
+  ["hang1", "A", { kind: "hang", at: 1 }],
+  ["hang3", "B", { kind: "hang", at: 3 }],
+]) report.fidelity[name] = await attempt(() => faulty(key, fault));
+report.fidelity.transportUrl = await attempt(async () => { const t = await transport("A", "abc", "normal", { kind: "wrongUrl", at: 2, variant: "path" }); return { error: t.error, hasResult: t.hasResult, id: t.id, gets: t.gets, ledger: t.ledger }; });
+report.fidelity.transportHang = await attempt(async () => { const t = await transport("A", "abc", "normal", { kind: "hang", at: 2 }); H.releaseHangs(); return { error: t.error, hasResult: t.hasResult, id: t.id, gets: t.gets, ledger: t.ledger }; });
 
 report.incomplete = await attempt(async () => {
   // Non-COMPLETE primary (genuine RESPONSE_TOO_LARGE from the 2,097,153-byte padded recursive body), no degraded form.
@@ -479,24 +511,72 @@ paddedRec.set(prepared.B.rec, 0);
 let getLog = [];
 let routes = {};
 let onFetch = null;
-const streamOf = (body) => {
+// highWaterMark 0: the source is pulled only when the consumer reads, so the pull count proves whether a body was parsed.
+const streamOf = (body, tally) => {
   let offset = 0;
   return new ReadableStream({
     pull(controller) {
+      tally.pulls += 1;
       if (offset >= body.length) { controller.close(); return; }
       const end = Math.min(body.length, offset + CHUNK);
       controller.enqueue(body.subarray(offset, end));
       offset = end;
     },
-  });
+    cancel() { tally.cancelled = true; },
+  }, { highWaterMark: 0 });
+};
+let ledger = [];
+let expectedUrls = [];
+let fault = null;
+let fastTimers = false;
+let hangs = [];
+const signalIds = new WeakMap();
+let signalSeq = 0;
+const API = "https://api.github.com";
+const wrongUrlFor = (variant, u) => {
+  if (variant === "path") return API + u.pathname.replace(/[0-9a-f]$/, (c) => (c === "0" ? "1" : "0")) + u.search;
+  if (variant === "origin") return "https://evil.example" + u.pathname + u.search;
+  return API + u.pathname;
 };
 const hostFetch = async (url, init = {}) => {
   const u = new URL(String(url));
-  getLog.push((init.method || "GET") + " " + u.pathname + u.search);
+  const n = ledger.length + 1;
+  const sig = init.signal;
+  const entry = {
+    n, method: init.method === undefined ? null : init.method, url: String(url), redirect: init.redirect === undefined ? null : init.redirect,
+    signal: sig ? (signalIds.has(sig) ? signalIds.get(sig) : -1) : null, signalAbortedAtCall: sig ? sig.aborted : null,
+    violations: [], urlReads: 0, respUrl: null, body: { pulls: 0, cancelled: false }, observedAbort: false, hangGuardFired: false,
+  };
+  if (entry.method !== "GET") entry.violations.push("method-not-GET");
+  if (entry.redirect !== "manual") entry.violations.push("redirect-not-manual");
+  if (entry.signal === null || entry.signal === -1) entry.violations.push("signal-missing");
+  if (entry.signalAbortedAtCall === true) entry.violations.push("signal-already-aborted");
+  if (entry.url !== expectedUrls[n - 1]) entry.violations.push("url-or-order");
+  ledger.push(entry);
+  getLog.push((init.method ?? "<omitted>") + " " + u.pathname + u.search);
   if (onFetch) onFetch();
+  if (entry.violations.length) {
+    process.stderr.write("FIDELITY_VIOLATION request " + n + ": " + entry.violations.join(",") + "\n");
+    throw new Error("fetch fidelity violation: " + entry.violations.join(","));
+  }
   const body = routes[u.pathname + u.search];
   if (!body) throw new Error("unmatched request " + u.pathname + u.search);
-  return new Response(streamOf(body), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
+  if (fault && fault.at === n && fault.kind === "hang") {
+    return new Promise((resolve, reject) => {
+      const guard = setTimeout(() => { entry.hangGuardFired = true; reject(new Error("hang guard: forwarded signal never aborted")); }, 5000);
+      hangs.push(() => clearTimeout(guard));
+      const onAbort = () => { clearTimeout(guard); entry.observedAbort = true; reject(new DOMException("The operation was aborted.", "AbortError")); };
+      if (sig.aborted) onAbort(); else sig.addEventListener("abort", onAbort, { once: true });
+    });
+  }
+  if (fault && fault.at === n && fault.kind === "redirect") {
+    return new Response(null, { status: 302, headers: { location: API + "/elsewhere" } });
+  }
+  const response = new Response(streamOf(body, entry.body), { status: 200, headers: { "content-type": "application/json; charset=utf-8" } });
+  entry.respUrl = fault && fault.at === n && fault.kind === "wrongUrl" ? wrongUrlFor(fault.variant, u) : String(url);
+  // A directly constructed Response has url "": install the observable url a real fetch response carries, and count reads of it.
+  Object.defineProperty(response, "url", { get() { entry.urlReads += 1; return entry.respUrl; }, configurable: true });
+  return response;
 };
 
 // 3. The production realm: a fresh vm context whose sandbox has a null prototype.
@@ -505,7 +585,7 @@ const ctx = vm.createContext(sandbox);
 const baselineGlobals = vm.runInNewContext("Object.getOwnPropertyNames(globalThis)", Object.create(null));
 const pairs = (h) => JSON.stringify([...h]);
 const bridge = {
-  fetch: (url, method, hjson, redirect, ctl) => hostFetch(url, { method, headers: JSON.parse(hjson), redirect, signal: ctl ? ctl.signal : undefined }),
+  fetch: (url, method, hjson, redirect, ctl) => hostFetch(url, { method: method === null ? undefined : method, headers: JSON.parse(hjson), redirect: redirect === null ? undefined : redirect, signal: ctl ? ctl.signal : undefined }),
   newResponse: (body, status, hjson) => new Response(body, { status, headers: JSON.parse(hjson) }),
   responseJson: (bodyJson, status, hjson) => Response.json(JSON.parse(bodyJson), { status, headers: JSON.parse(hjson) }),
   respStatus: (r) => r.status, respOk: (r) => r.ok, respUrl: (r) => r.url, respType: (r) => r.type,
@@ -517,8 +597,8 @@ const bridge = {
   encode: (s) => new TextEncoder().encode(s),
   decode: (label, fatal, view) => new TextDecoder(label, { fatal }).decode(view),
   digest: (algorithm, view) => crypto.subtle.digest(algorithm, view).then((ab) => new Uint8Array(ab)),
-  setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (handle) => clearTimeout(handle),
-  newAbort: () => new AbortController(), abort: (c) => c.abort(),
+  setTimeout: (fn, ms) => setTimeout(fn, fastTimers ? 0 : ms), clearTimeout: (handle) => clearTimeout(handle),
+  newAbort: () => { const c = new AbortController(); signalIds.set(c.signal, ++signalSeq); return c; }, abort: (c) => c.abort(),
   parseUrl: (input, base) => {
     const u = base === null ? new URL(input) : new URL(input, base);
     return JSON.stringify({ href: u.href, origin: u.origin, protocol: u.protocol, username: u.username, password: u.password, host: u.host, hostname: u.hostname, port: u.port, pathname: u.pathname, search: u.search, hash: u.hash });
@@ -539,7 +619,14 @@ sandbox.__harness = {
       [GIT + "/trees/" + p.fx.tree + "?recursive=1"]: mode === "padded" ? paddedRec : p.rec,
     };
     getLog = [];
+    ledger = [];
+    fault = null;
+    fastTimers = false;
+    expectedUrls = [API + GIT + "/commits/" + p.fx.commit, API + GIT + "/trees/" + p.fx.tree, API + GIT + "/trees/" + p.fx.tree + "?recursive=1"];
   },
+  setFault: (json) => { fault = JSON.parse(json); fastTimers = fault.kind === "hang"; },
+  releaseHangs: () => { for (const release of hangs.splice(0)) release(); fastTimers = false; },
+  ledger: () => JSON.stringify(ledger),
   gets: () => JSON.stringify(getLog),
   fetchUrl: (key, which) => "https://api.github.com" + GIT + "/commits/" + prepared[key].fx.commit,
   onFetch: (fn) => { onFetch = fn; },
@@ -668,7 +755,8 @@ function evaluate(run) {
   const check = (ok, what) => { if (!ok) problems.push(what); };
   const sec = (name, fn) => { try { fn(); } catch (e) { problems.push(`${name} not evaluable: ${e.message}`); } };
   if (run.status !== 0 || !run.report) {
-    return [`child failed (status ${run.status}): ${String(run.stderr).split("\n").find((l) => /Error/.test(l)) || "no report"}`];
+    const fidelity = String(run.stderr).split("\n").filter((l) => l.startsWith("FIDELITY_VIOLATION")).map((l) => `fetch fidelity: ${l}`);
+    return [`child failed (status ${run.status}): ${String(run.stderr).split("\n").find((l) => /Error/.test(l)) || "no report"}`, ...fidelity];
   }
   const r = run.report;
   check(JSON.stringify(r.order) === JSON.stringify(["delete", "asserted-undefined", "asserted-no-property", "asserted-not-in", "realm-audited", "imported"]), "order delete -> assert (typeof, own property, in) -> audit -> import");
@@ -742,7 +830,66 @@ function evaluate(run) {
   check(r.tier4B.tier === 4 && r.tier4B.status === 500 && r.tier4B.body === "Output ceiling exceeded", "tiny ceiling for B: tier 4");
   check(r.writer.aTier === 2 && r.writer.bTier === 3 && r.writer.bId === "abc", "real writer tiers for the real envelopes");
   });
+  sec("fetch fidelity", () => fidelityProblems(r, check));
   return problems;
+}
+
+const API_URL = "https://api.github.com";
+const urlsFor = (pin) => [`${API_URL}${GIT}/commits/${pin.commit}`, `${API_URL}${GIT}/trees/${pin.tree}`, `${API_URL}${GIT}/trees/${pin.tree}?recursive=1`];
+
+/** R375 / F-374-1: exact method, absolute URL, redirect mode, signal identity and response-URL checks on every routed GET. */
+function fidelityProblems(r, check) {
+  const pinFor = (name) => (/B/.test(name) ? B_PIN : A_PIN);
+  const ledgers = r.ledgers || {};
+  for (const [name, ledger] of Object.entries(ledgers)) {
+    const want = urlsFor(pinFor(name));
+    check(Array.isArray(ledger) && ledger.length === 3, `fetch fidelity ${name}: complete three-request ledger`);
+    if (!Array.isArray(ledger)) continue;
+    const ids = ledger.map((e) => e.signal);
+    check(ledger.every((e, i) => e.n === i + 1 && e.url === want[i]), `fetch fidelity ${name}: exact absolute url and route order commit, root tree, recursive tree`);
+    check(ledger.every((e) => e.method === "GET"), `fetch fidelity ${name}: explicit method GET on every request`);
+    check(ledger.every((e) => e.redirect === "manual"), `fetch fidelity ${name}: redirect manual on every request`);
+    check(ledger.every((e) => Number.isInteger(e.signal) && e.signal > 0 && e.signalAbortedAtCall === false), `fetch fidelity ${name}: a live forwarded abort signal on every request`);
+    check(new Set(ids).size === 3, `fetch fidelity ${name}: one distinct abort controller per request`);
+    check(ledger.every((e) => e.violations.length === 0), `fetch fidelity ${name}: no host-side violation`);
+    check(ledger.every((e) => e.respUrl === e.url && e.respUrl !== ""), `fetch fidelity ${name}: response url is the nonempty exact request url`);
+    check(ledger.every((e) => e.urlReads >= 1), `fetch fidelity ${name}: production read the response url (comparison executed) on every request`);
+    check(ledger.every((e) => e.body.pulls > 0), `fetch fidelity ${name}: every body was read on the success path`);
+  }
+  const f = r.fidelity || {};
+  const mismatch = (name, at) => {
+    const x = f[name];
+    check(x && !x.crashed, `fetch fidelity ${name}: scenario crashed ${x && x.crashed}`);
+    if (!x || x.crashed) return;
+    check(x.outcome && x.outcome.returned === false && x.outcome.errorClass === "UPSTREAM_MALFORMED" && x.outcome.reason === "RESPONSE_URL_MISMATCH", `fetch fidelity ${name}: wrong response url must fail closed RESPONSE_URL_MISMATCH, got ${JSON.stringify(x.outcome)}`);
+    check(x.ledger.length === at && x.gets.length === at, `fetch fidelity ${name}: no further GET after the mismatch (got ${x.gets.length})`);
+    const last = x.ledger[at - 1];
+    check(last && last.urlReads >= 1 && last.respUrl !== last.url && last.body.pulls === 0 && last.body.cancelled === true, `fetch fidelity ${name}: mismatched body never parsed (pulls ${last && last.body.pulls})`);
+    check(x.ledger.slice(0, at - 1).every((e) => e.body.pulls > 0 && e.violations.length === 0), `fetch fidelity ${name}: earlier requests succeeded normally`);
+  };
+  mismatch("urlPath1", 1);
+  mismatch("urlOrigin2", 2);
+  mismatch("urlQuery3", 3);
+  mismatch("urlQuery3A", 3);
+  {
+    const x = f.redirect2;
+    check(x && !x.crashed && x.outcome && x.outcome.returned === false && x.outcome.errorClass === "UPSTREAM_MALFORMED" && x.outcome.reason === "REDIRECT_DENIED" && x.gets.length === 2, `fetch fidelity redirect: a manual-redirect 3xx must fail closed REDIRECT_DENIED, got ${JSON.stringify(x && x.outcome)}`);
+  }
+  const hang = (name, at) => {
+    const x = f[name];
+    check(x && !x.crashed, `fetch fidelity ${name}: scenario crashed ${x && x.crashed}`);
+    if (!x || x.crashed) return;
+    check(x.outcome.returned === false && x.outcome.errorClass === "TIMEOUT" && x.outcome.reason === "REQUEST_TIMEOUT", `fetch fidelity ${name}: bounded abort must classify TIMEOUT REQUEST_TIMEOUT, got ${JSON.stringify(x.outcome)}`);
+    const h = x.ledger[at - 1];
+    check(x.ledger.length === at && h && h.observedAbort === true && h.hangGuardFired === false, `fetch fidelity ${name}: the host operation did not observe the forwarded signal abort (hang guard ${h && h.hangGuardFired})`);
+    check(h && h.violations.length === 0 && h.signal > 0, `fetch fidelity ${name}: hung request carried method, redirect and signal`);
+  };
+  hang("hang1", 1);
+  hang("hang3", 3);
+  const tu = f.transportUrl;
+  check(tu && !tu.crashed && tu.hasResult === false && tu.id === "abc" && tu.error && tu.error.reason === "RESPONSE_URL_MISMATCH" && tu.gets.length === 2, `fetch fidelity transport: wrong response url through the real transport, got ${JSON.stringify(tu && (tu.error || tu.crashed))}`);
+  const th = f.transportHang;
+  check(th && !th.crashed && th.hasResult === false && th.id === "abc" && th.error && th.error.errorClass === "TIMEOUT" && th.error.reason === "REQUEST_TIMEOUT" && th.ledger[1] && th.ledger[1].observedAbort === true, `fetch fidelity transport: forwarded abort through the real transport, got ${JSON.stringify(th && (th.error || th.crashed))}`);
 }
 
 let baselineRun = null;
@@ -884,6 +1031,53 @@ for (const [label, title, edits, expected] of MUTATIONS) {
     } finally { rmSync(mutated, { recursive: true, force: true }); }
   });
 }
+
+// R375 / F-374-1: mutations of the PRODUCT fetch call and response-URL check. Each must be caught by the fidelity proof for its own reason.
+const FETCH_CALL = 'fetch(requestUrl, { method: "GET", headers, redirect: "manual", signal: controller.signal }),';
+const FETCH_MUTATIONS = [
+  ["method-post", "GET changed to POST", [[FETCH_CALL, 'fetch(requestUrl, { method: "POST", headers, redirect: "manual", signal: controller.signal }),']], /method-not-GET|method GET/],
+  ["method-omitted", "explicit method omitted", [[FETCH_CALL, 'fetch(requestUrl, { headers, redirect: "manual", signal: controller.signal }),']], /method-not-GET|method GET/],
+  ["redirect-follow", "redirect manual changed to follow", [[FETCH_CALL, 'fetch(requestUrl, { method: "GET", headers, redirect: "follow", signal: controller.signal }),']], /redirect-not-manual|redirect manual/],
+  ["redirect-omitted", "redirect option removed", [[FETCH_CALL, 'fetch(requestUrl, { method: "GET", headers, signal: controller.signal }),']], /redirect-not-manual|redirect manual/],
+  ["signal-omitted", "abort signal omitted", [[FETCH_CALL, 'fetch(requestUrl, { method: "GET", headers, redirect: "manual" }),']], /signal-missing|abort signal/],
+  ["signal-substituted", "an unrelated abort signal substituted", [[FETCH_CALL, 'fetch(requestUrl, { method: "GET", headers, redirect: "manual", signal: new AbortController().signal }),']], /hang1|hang3|hang/],
+  ["timer-never-aborts", "the timeout timer never aborts the controller", [["const timer = setTimeout(() => controller.abort(), limit);", "const timer = setTimeout(() => {}, limit);"]], /hang1|hang3|hang/],
+  ["url-check-removed", "response-URL comparison removed", [['if (typeof response.url === "string" && response.url) {', "if (false) {"]], /read the response url|RESPONSE_URL_MISMATCH/],
+  ["url-mismatch-accepted", "a mismatched response URL is accepted", [["if (!same) {", "if (false) {"]], /RESPONSE_URL_MISMATCH/],
+  ["url-path-ignored", "pathname dropped from the URL comparison", [["got.origin === want.origin && got.pathname === want.pathname && got.search === want.search", "got.origin === want.origin && got.search === want.search"]], /urlPath1/],
+  ["url-origin-ignored", "origin dropped from the URL comparison", [["got.origin === want.origin && got.pathname === want.pathname && got.search === want.search", "got.pathname === want.pathname && got.search === want.search"]], /urlOrigin2/],
+  ["url-search-ignored", "query dropped from the URL comparison", [["got.origin === want.origin && got.pathname === want.pathname && got.search === want.search", "got.origin === want.origin && got.pathname === want.pathname"]], /urlQuery3/],
+  ["redirect-allowed", "3xx responses no longer rejected", [['if ((status >= 300 && status < 400) || response.type === "opaqueredirect") {', "if (false) {"]], /REDIRECT_DENIED|redirect:/],
+];
+for (const [label, title, edits, expected] of FETCH_MUTATIONS) {
+  test(`R375 mutation ${label}: ${title} fails the VM fetch-fidelity proof`, { timeout: 300_000 }, () => {
+    const mutated = mutantRoot(`fx-${label}`, edits.map(([from, to]) => ["github.js", from, to]));
+    try {
+      const run = runChild(mutated);
+      const problems = evaluate(run);
+      assert.notDeepEqual(problems, [], `mutation ${label} was not detected`);
+      assert.ok(problems.some((p) => expected.test(p)), `unexpected detection for ${label}: ${problems.join(" | ")}`);
+    } finally { rmSync(mutated, { recursive: true, force: true }); }
+  });
+}
+
+test("R375 harness controls: the ledger helper rejects tampered success ledgers and the fixture exposes a nonempty request-identical url", { timeout: 300_000 }, () => {
+  const r = structuredClone(baseline().report);
+  const problemsOf = (report) => { const out = []; fidelityProblems(report, (ok, what) => { if (!ok) out.push(what); }); return out; };
+  assert.deepEqual(problemsOf(r), []);
+  const tamper = (fn, expected) => { const t = structuredClone(r); fn(t); assert.ok(problemsOf(t).some((p) => expected.test(p)), `tamper not detected: ${expected}`); };
+  tamper((t) => { t.ledgers.productionA[1].method = "POST"; }, /method GET/);
+  tamper((t) => { t.ledgers.productionA[2].redirect = "follow"; }, /redirect manual/);
+  tamper((t) => { t.ledgers.productionB[0].signal = null; }, /abort signal/);
+  tamper((t) => { t.ledgers.productionB[1].signal = t.ledgers.productionB[0].signal; }, /distinct abort controller/);
+  tamper((t) => { t.ledgers.transportA[2].url += "&x=1"; }, /exact absolute url/);
+  tamper((t) => { t.ledgers.transportB[0].respUrl = ""; }, /nonempty exact request url/);
+  tamper((t) => { t.ledgers.transportBnum[0].urlReads = 0; }, /comparison executed/);
+  tamper((t) => { t.ledgers.productionA.pop(); }, /three-request ledger/);
+  tamper((t) => { t.fidelity.urlOrigin2.outcome = { returned: true, status: "COMPLETE" }; }, /RESPONSE_URL_MISMATCH/);
+  tamper((t) => { t.fidelity.hang3.ledger[2].observedAbort = false; }, /did not observe the forwarded signal/);
+  for (const e of r.ledgers.productionA) assert.ok(e.respUrl.startsWith("https://api.github.com/") && e.respUrl === e.url);
+});
 
 // Harness negative controls: a bridge that leaks the host Buffer, or a host-realm object, into the production realm must be caught.
 const LEAK_EXPECTED = {
