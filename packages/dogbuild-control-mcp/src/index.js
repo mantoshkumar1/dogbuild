@@ -1,5 +1,6 @@
 import { ControlError, ErrorClass } from "./errors.js";
 import { callTool } from "./handlers.js";
+import { MAX_MCP_RESPONSE_BYTES, isAllowedRequestId, writeErrorResponse, writeToolResponse } from "./output.js";
 import { TOOLS } from "./tools.js";
 
 export const SERVER_NAME = "dogbuild-control-mcp";
@@ -7,6 +8,11 @@ export const SERVER_VERSION = "0.1.0";
 export const MAX_REQUEST_BYTES = 32_768;
 const PATH_SECRET_RE = /^[A-Za-z0-9._~-]{32,256}$/;
 const ACCESS_TOKEN_RE = /^[A-Za-z0-9._~-]{32,512}$/;
+
+// The fixed same-ID fallback for get_raw_commit must always fit its ceiling.
+if (!(6 * MAX_REQUEST_BYTES + 512 < MAX_MCP_RESPONSE_BYTES)) {
+  throw new Error("MAX_REQUEST_BYTES is too large for the get_raw_commit output ceiling.");
+}
 
 function result(id, value) {
   return { jsonrpc: "2.0", id, result: value };
@@ -46,6 +52,29 @@ async function readRpc(request) {
   }
 }
 
+async function handleRawCommit(rpc, env) {
+  // No id member: a notification. Accepted without a body; nothing is run.
+  if (!Object.prototype.hasOwnProperty.call(rpc, "id")) return new Response(null, { status: 202 });
+  const id = rpc.id;
+  if (!isAllowedRequestId(id)) {
+    return Response.json(
+      rpcError(null, -32600, "Invalid request id.", { error_class: "INVALID_INPUT", reason: "INVALID_REQUEST_ID" }),
+      { status: 400 }
+    );
+  }
+  const args = rpc.params.arguments !== undefined ? rpc.params.arguments : {};
+  let written;
+  try {
+    written = writeToolResponse(id, await callTool(env, "get_raw_commit", args));
+  } catch (error) {
+    const controlled = error instanceof ControlError
+      ? error
+      : new ControlError(ErrorClass.UPSTREAM_ERROR, "Internal error.");
+    written = writeErrorResponse(id, controlled);
+  }
+  return new Response(written.body, { status: written.status, headers: { "content-type": written.contentType } });
+}
+
 async function handle(request, env) {
   const url = new URL(request.url);
   const expectedPath = env && PATH_SECRET_RE.test(env.MCP_PATH_SECRET || "")
@@ -76,6 +105,12 @@ async function handle(request, env) {
       ? error
       : new ControlError(ErrorClass.INVALID_INPUT, "MCP request could not be read.");
     return Response.json(rpcError(null, -32700, controlled.message, controlled.toJSON()), { status: 400 });
+  }
+
+  const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  if (isObject(rpc) && rpc.method === "tools/call" && isObject(rpc.params) &&
+      Object.prototype.hasOwnProperty.call(rpc.params, "name") && rpc.params.name === "get_raw_commit") {
+    return handleRawCommit(rpc, env);
   }
 
   const { id = null, method, params } = rpc || {};

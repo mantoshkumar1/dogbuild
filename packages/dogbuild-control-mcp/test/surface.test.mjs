@@ -24,10 +24,12 @@ const LEGACY_AND_FORBIDDEN = [
   "merge_pull_request", "dispatch_workflow", "rerun_workflow", "get_job_logs",
 ];
 
-test("the V1 catalogue exposes exactly one read-only tool", () => {
-  assert.deepEqual(TOOLS.map((tool) => tool.name), ["get_commit_ci"]);
+test("the V1 catalogue exposes exactly two read-only tools: get_commit_ci and get_raw_commit", () => {
+  assert.deepEqual(TOOLS.map((tool) => tool.name), ["get_commit_ci", "get_raw_commit"]);
   assert.equal(findTool("get_commit_ci").inputSchema.additionalProperties, false);
   assert.deepEqual(findTool("get_commit_ci").inputSchema.required, ["owner", "repo", "sha"]);
+  assert.equal(findTool("get_raw_commit").inputSchema.additionalProperties, false);
+  assert.deepEqual(findTool("get_raw_commit").inputSchema.required, ["owner", "repo", "sha"]);
 });
 
 test("every legacy, parked, generic, destructive and random name is unreachable", async () => {
